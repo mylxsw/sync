@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package protocol;
+
+message DownloadRequest {
+    string Filename = 1;
+}
+
+message DownloadResponse {
+    bytes Content = 1;
+}
+
+

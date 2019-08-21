@@ -1,0 +1,34 @@
+
+sync:
+  - name: sync php files
+    from: 127.0.0.1
+    files:
+      - source: /data/php_projects
+        dest: /data/php_projects
+        delete: true
+      - source: /etc/nginx/conf.d/php-service.conf
+        dest: /etc/nginx/conf.d/php-service.conf
+      - source: /etc/php/php-fpm.d/www.conf
+        dest: /etc/php/php-fpm.d/www.conf
+        after:
+          - action: command
+            when: .File.Changed
+            command: systemctl restart php-fpm
+    rules:
+      - file: /data/php_projects/.env
+        action: replace
+        match: REDIS_HOST=(.*?)
+        replace: REDIS_HOST=127.0.0.1
+    after:
+      - action: command
+        command: systemctl reload nginx
+
+  - name: sync java files
+    from: 127.0.0.1
+    files:
+      - source: /webroot/test.jar
+        dest: /data/webroot/test.jar
+      - source: /usr/lib/systemd/system/test-service.service
+    after:
+      - action: command
+        command: systemctl restart test-service

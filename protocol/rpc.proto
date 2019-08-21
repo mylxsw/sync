@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package protocol;
+
+import "protocol/download.proto";
+import "protocol/sync.proto";
+
+service SyncService {
+    rpc Download (DownloadRequest) returns (stream DownloadResponse) {
+    }
+    rpc Sync (SyncRequest) returns (SyncResponse) {
+    }
+}

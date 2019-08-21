@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package protocol;
+
+enum Type {
+    Normal = 0;
+    Directory = 1;
+    Symlink = 2;
+}
+
+message File {
+    string path = 1;
+    string checksum = 2;
+    int64 size = 3;
+    Type type = 4;
+    string symlink = 5;
+    uint32 mode = 6;
+    uint32 uid = 7;
+    uint32 gid = 8;
+    string user = 9;
+    string group = 10;
+}
+
+message SyncRequest {
+    string path = 1;
+}
+
+message SyncResponse {
+    repeated File files = 1;
+}
