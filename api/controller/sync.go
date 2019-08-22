@@ -24,7 +24,11 @@ func (s *FileSyncController) Register(router *hades.Router) {
 
 func (s *FileSyncController) Sync(ctx *hades.WebContext, req *hades.Request, syncQueue queue.SyncQueue) hades.HTTPResponse {
 	job := queue.FileSyncJob{}
+
 	job.Path = req.Input("path")
+	job.ServerAddr = "localhost:8818"
+	job.Token = ""
+
 	if job.Path == "" {
 		return ctx.Error("invalid path argument", http.StatusUnprocessableEntity)
 	}

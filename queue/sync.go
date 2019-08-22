@@ -10,7 +10,9 @@ import (
 
 // FileSyncJob 文件同步任务
 type FileSyncJob struct {
-	Path string `json:"path"`
+	Path       string `json:"path"`
+	ServerAddr string `json:"server_addr"`
+	Token      string `json:"token"`
 }
 
 func (job *FileSyncJob) Encode() []byte {
@@ -23,7 +25,7 @@ func (job *FileSyncJob) Decode(res []byte) {
 }
 
 func (job *FileSyncJob) Handle(ctx context.Context, rpcFactory rpc.Factory) error {
-	syncClient, err := rpcFactory.SyncClient("localhost:8818", "")
+	syncClient, err := rpcFactory.SyncClient(job.ServerAddr, job.Token)
 	if err != nil {
 		return errors.Wrap(err, "create sync rpc client failed")
 	}
