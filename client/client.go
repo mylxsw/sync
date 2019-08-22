@@ -16,18 +16,22 @@ import (
 	"github.com/mylxsw/sync/utils"
 )
 
-// FileSync 文件同步客户端
-type FileSync struct {
+type FileSync interface {
+	Sync(path string) error
+}
+
+// fileSyncClient 文件同步客户端
+type fileSyncClient struct {
 	client protocol.SyncServiceClient
 }
 
 // NewFileSync 创建一个文件同步客户端
-func NewFileSync(client protocol.SyncServiceClient) *FileSync {
-	return &FileSync{client: client}
+func NewFileSync(client protocol.SyncServiceClient) FileSync {
+	return &fileSyncClient{client: client}
 }
 
 // Sync 执行文件同步
-func (fs *FileSync) Sync(path string) error {
+func (fs *fileSyncClient) Sync(path string) error {
 	resp, err := fs.client.Sync(context.TODO(), &protocol.SyncRequest{Path: path})
 	if err != nil {
 		return err
@@ -45,7 +49,7 @@ func (fs *FileSync) Sync(path string) error {
 }
 
 // syncNormalFiles 同步普通文件
-func (fs *FileSync) syncNormalFiles(f *protocol.File, savedFilePath string) error {
+func (fs *fileSyncClient) syncNormalFiles(f *protocol.File, savedFilePath string) error {
 	skipDownload := false
 	if utils.FileExist(savedFilePath) {
 		finger, _ := checksum.MD5sum(savedFilePath)
@@ -85,7 +89,7 @@ func (fs *FileSync) syncNormalFiles(f *protocol.File, savedFilePath string) erro
 }
 
 // applyFiles 批量处理指定类型的文件
-func (fs *FileSync) applyFiles(files []*protocol.File, fileType protocol.Type, cb func(f *protocol.File, savedFilePath string) error) {
+func (fs *fileSyncClient) applyFiles(files []*protocol.File, fileType protocol.Type, cb func(f *protocol.File, savedFilePath string) error) {
 	coll.MustNew(files).Filter(func(f *protocol.File) bool {
 		return f.Type == fileType
 	}).Each(func(f *protocol.File) {
@@ -102,7 +106,7 @@ func (fs *FileSync) applyFiles(files []*protocol.File, fileType protocol.Type, c
 }
 
 // syncFileOwner 同步文件属主
-func (fs *FileSync) syncFileOwner(dest string, f *protocol.File) {
+func (fs *fileSyncClient) syncFileOwner(dest string, f *protocol.File) {
 	finfo, _ := os.Stat(dest)
 	stat, _ := finfo.Sys().(*syscall.Stat_t)
 	uid := -1
@@ -139,7 +143,7 @@ func (fs *FileSync) syncFileOwner(dest string, f *protocol.File) {
 }
 
 // writeFile 创建新文件
-func (fs *FileSync) writeFile(downloadResp protocol.SyncService_DownloadClient, f *protocol.File, savedFilePath string) error {
+func (fs *fileSyncClient) writeFile(downloadResp protocol.SyncService_DownloadClient, f *protocol.File, savedFilePath string) error {
 	log.Debugf("write file %s with mode=%s, size=%d ...", savedFilePath, os.FileMode(f.Mode), f.Size)
 
 	saveFile, err := os.OpenFile(savedFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(f.Mode))

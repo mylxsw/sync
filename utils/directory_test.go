@@ -13,7 +13,6 @@ func TestAllFiles(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, files, 1)
 	}
-
 	{
 		files, err := utils.AllFiles("./testcase")
 		assert.NoError(t, err)

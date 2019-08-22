@@ -1,51 +1,53 @@
 package main
 
 import (
-	"net"
-	"sync"
-	"time"
+	"fmt"
+	"os"
 
 	"github.com/mylxsw/asteria/log"
-	"github.com/mylxsw/sync/client"
-	"github.com/mylxsw/sync/protocol"
+	"github.com/mylxsw/glacier"
+	"github.com/mylxsw/sync/api"
+	"github.com/mylxsw/sync/config"
+	"github.com/mylxsw/sync/rpc"
 	"github.com/mylxsw/sync/server"
-	"google.golang.org/grpc"
+	"github.com/urfave/cli"
+	"github.com/urfave/cli/altsrc"
 )
 
+var Version string
+var GitCommit string
+
 func main() {
-	var wg sync.WaitGroup
-	wg.Add(1)
 
-	go func() {
-		defer wg.Done()
-		listener, err := net.Listen("tcp", ":8818")
-		if err != nil {
-			panic(err)
+	log.DefaultDynamicModuleName(true)
+
+	app := glacier.Create(fmt.Sprintf("%s (%s)", Version, GitCommit))
+
+	app.AddFlags(altsrc.NewInt64Flag(cli.Int64Flag{
+		Name:  "file_transfer_buffer_size",
+		Usage: "文件传输缓冲区大小",
+		Value: 10240,
+	}))
+	app.AddFlags(altsrc.NewStringFlag(cli.StringFlag{
+		Name:  "rpc_listen_addr",
+		Usage: "GRPC 服务监听地址，用于内部不同的服务实例之间通信",
+		Value: ":8818",
+	}))
+
+	app.Singleton(func(c *cli.Context) *config.Config {
+		return &config.Config{
+			FileTransferBufferSize: c.Int64("file_transfer_buffer_size"),
+			RPCListenAddr:          c.String("rpc_listen_addr"),
 		}
+	})
 
-		syncServer := server.NewSyncServer(10240)
+	app.WithHttpServer(":8819")
 
-		grpcServer := grpc.NewServer()
-		protocol.RegisterSyncServiceServer(grpcServer, syncServer)
+	app.Provider(&server.ServiceProvider{})
+	app.Provider(&rpc.ServiceProvider{})
+	app.Provider(&api.ServiceProvider{})
 
-		if err := grpcServer.Serve(listener); err != nil {
-			panic(err)
-		}
-	}()
-
-	time.Sleep(time.Second)
-
-	// TEST
-
-	conn, err := grpc.Dial("127.0.0.1:8818", grpc.WithInsecure())
-	if err != nil {
-		panic(err)
+	if err := app.Run(os.Args); err != nil {
+		log.Errorf("exit: %s", err)
 	}
-
-	fs := client.NewFileSync(protocol.NewSyncServiceClient(conn))
-	if err := fs.Sync("/data/logs"); err != nil {
-		log.Errorf("sync failed: %s", err)
-	}
-
-	wg.Wait()
 }

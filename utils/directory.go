@@ -31,6 +31,7 @@ type File struct {
 	Group    string
 }
 
+// AllFiles 返回目录/文件下所有的目录/文件
 func AllFiles(dir string) ([]File, error) {
 	files := make([]File, 0)
 	if err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {

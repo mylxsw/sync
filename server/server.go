@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/mylxsw/coll"
 	"github.com/mylxsw/sync/protocol"
@@ -54,9 +55,19 @@ func (s *SyncServer) Download(req *protocol.DownloadRequest, serv protocol.SyncS
 
 // Sync 文件元信息同步
 func (s *SyncServer) Sync(ctx context.Context, req *protocol.SyncRequest) (*protocol.SyncResponse, error) {
-	files, err := utils.AllFiles(req.Path)
+	matches, err := filepath.Glob(req.Path)
 	if err != nil {
 		return nil, err
+	}
+
+	files := make([]utils.File, 0)
+	for _, f := range matches {
+		ffs, err := utils.AllFiles(f)
+		if err != nil {
+			return nil, err
+		}
+
+		files = append(files, ffs...)
 	}
 
 	resp := protocol.SyncResponse{}
