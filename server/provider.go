@@ -13,6 +13,7 @@ import (
 	"github.com/mylxsw/graceful"
 	"github.com/mylxsw/sync/config"
 	"github.com/mylxsw/sync/protocol"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
 
@@ -41,11 +42,11 @@ func (s *ServiceProvider) Boot(app *glacier.Glacier) {
 	})
 }
 
-func (s *ServiceProvider) Daemon(app *glacier.Glacier) {
+func (s *ServiceProvider) Daemon(ctx context.Context, app *glacier.Glacier) {
 	app.MustResolve(func(server *grpc.Server, gf *graceful.Graceful, conf *config.Config) error {
 		listener, err := net.Listen("tcp", conf.RPCListenAddr)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "grpc listen to addr %d failed", conf.RPCListenAddr)
 		}
 
 		// 平滑关闭 Server
@@ -56,7 +57,7 @@ func (s *ServiceProvider) Daemon(app *glacier.Glacier) {
 
 		log.Debugf("grpc server started, listening on %s", conf.RPCListenAddr)
 		if err := server.Serve(listener); err != nil {
-			return err
+			return errors.Wrap(err, "grpc server stopped")
 		}
 
 		return nil

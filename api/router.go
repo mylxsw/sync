@@ -10,7 +10,7 @@ func routers(cc *container.Container) func (router *hades.Router, mw hades.Reque
 	return func(router *hades.Router, mw hades.RequestMiddleware) {
 		router.Group("/", func(router *hades.Router) {
 			controller.NewWelcomeController().Register(router)
-			controller.NewSyncController(cc).Register(router)
+			controller.NewFileSyncController(cc).Register(router)
 
 		}, mw.AccessLog(), mw.JSONExceptionHandler(), mw.CORS("*"))
 	}

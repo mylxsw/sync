@@ -8,8 +8,10 @@ import (
 	"github.com/mylxsw/glacier"
 	"github.com/mylxsw/sync/api"
 	"github.com/mylxsw/sync/config"
+	"github.com/mylxsw/sync/queue"
 	"github.com/mylxsw/sync/rpc"
 	"github.com/mylxsw/sync/server"
+	"github.com/mylxsw/sync/storage"
 	"github.com/urfave/cli"
 	"github.com/urfave/cli/altsrc"
 )
@@ -31,11 +33,23 @@ func main() {
 		Usage: "GRPC 服务监听地址，用于内部不同的服务实例之间通信",
 		Value: ":8818",
 	}))
+	app.AddFlags(altsrc.NewStringFlag(cli.StringFlag{
+		Name:  "db",
+		Usage: "本地数据库存储文件",
+		Value: "/data/sync_db",
+	}))
+	app.AddFlags(altsrc.NewIntFlag(cli.IntFlag{
+		Name:  "file_sync_worker_num",
+		Usage: "文件同步 Worker 数量",
+		Value: 3,
+	}))
 
 	app.Singleton(func(c *cli.Context) *config.Config {
 		return &config.Config{
 			FileTransferBufferSize: c.Int64("file_transfer_buffer_size"),
 			RPCListenAddr:          c.String("rpc_listen_addr"),
+			DB:                     c.String("db"),
+			FileSyncWorkerNum:      c.Int("file_sync_worker_num"),
 		}
 	})
 
@@ -44,6 +58,8 @@ func main() {
 	app.Provider(&server.ServiceProvider{})
 	app.Provider(&rpc.ServiceProvider{})
 	app.Provider(&api.ServiceProvider{})
+	app.Provider(&storage.ServiceProvider{})
+	app.Provider(&queue.ServiceProvider{})
 
 	if err := app.Run(os.Args); err != nil {
 		log.Errorf("exit: %s", err)

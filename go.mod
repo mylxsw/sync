@@ -5,6 +5,8 @@ go 1.12
 require (
 	cloud.google.com/go v0.44.3 // indirect
 	github.com/codingsince1985/checksum v1.0.0
+	github.com/cupcake/rdb v0.0.0-20161107195141-43ba34106c76 // indirect
+	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/golang/protobuf v1.3.2
 	github.com/google/go-cmp v0.3.1 // indirect
@@ -16,10 +18,16 @@ require (
 	github.com/mylxsw/asteria v0.0.0-20190818103215-f64f703d8999
 	github.com/mylxsw/coll v0.0.0-20190810120926-a7a6f0f4bae8
 	github.com/mylxsw/container v0.0.0-20190810122756-1fd99a90f7c6
-	github.com/mylxsw/glacier v0.0.0-20190822044628-595a8b244d3b
+	github.com/mylxsw/glacier v0.0.0-20190822165307-d22f76cd5878
 	github.com/mylxsw/graceful v0.0.0-20190810132432-36a0395cf382
-	github.com/mylxsw/hades v0.0.0-20190810133536-f14dbfdce5c6
+	github.com/mylxsw/hades v0.0.0-20190822153059-6c17d87106c5
+	github.com/pelletier/go-toml v1.4.0 // indirect
+	github.com/pkg/errors v0.8.1
+	github.com/siddontang/go v0.0.0-20180604090527-bdc77568d726 // indirect
+	github.com/siddontang/ledisdb v0.0.0-20190202134119-8ceb77e66a92
+	github.com/siddontang/rdb v0.0.0-20150307021120-fc89ed2e418d // indirect
 	github.com/stretchr/testify v1.4.0
+	github.com/syndtr/goleveldb v1.0.0 // indirect
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586 // indirect
 	golang.org/x/mobile v0.0.0-20190814143026-e8b3e6111d02 // indirect
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7 // indirect

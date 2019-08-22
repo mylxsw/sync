@@ -6,7 +6,7 @@ import (
 
 type WelcomeController struct{}
 
-func NewWelcomeController() *WelcomeController {
+func NewWelcomeController() Controller {
 	return &WelcomeController{}
 }
 

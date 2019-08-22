@@ -9,6 +9,7 @@ import (
 	"github.com/mylxsw/coll"
 	"github.com/mylxsw/sync/protocol"
 	"github.com/mylxsw/sync/utils"
+	"github.com/pkg/errors"
 )
 
 // SyncServer 同步服务端实现
@@ -25,7 +26,7 @@ func NewSyncServer(bufferSize int64) *SyncServer {
 func (s *SyncServer) Download(req *protocol.DownloadRequest, serv protocol.SyncService_DownloadServer) error {
 	f, err := os.Open(req.Filename)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "can not open such file: %s", req.Filename)
 	}
 
 	defer f.Close()
@@ -40,13 +41,13 @@ func (s *SyncServer) Download(req *protocol.DownloadRequest, serv protocol.SyncS
 				continue
 			}
 
-			return err
+			return errors.Wrapf(err, "read file %s failed", req.Filename)
 		}
 
 		if err := serv.Send(&protocol.DownloadResponse{
 			Content: buf[:n],
 		}); err != nil {
-			return err
+			return errors.Wrap(err, "send file chunk failed")
 		}
 	}
 
@@ -57,14 +58,14 @@ func (s *SyncServer) Download(req *protocol.DownloadRequest, serv protocol.SyncS
 func (s *SyncServer) Sync(ctx context.Context, req *protocol.SyncRequest) (*protocol.SyncResponse, error) {
 	matches, err := filepath.Glob(req.Path)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "invalid glob expression")
 	}
 
 	files := make([]utils.File, 0)
 	for _, f := range matches {
 		ffs, err := utils.AllFiles(f)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "read all files failed")
 		}
 
 		files = append(files, ffs...)
@@ -84,7 +85,7 @@ func (s *SyncServer) Sync(ctx context.Context, req *protocol.SyncRequest) (*prot
 			Group:    f.Group,
 		}
 	}); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "convert []utils.File to resp.Files failed")
 	}
 
 	return &resp, nil
