@@ -18,9 +18,7 @@ var Version string
 var GitCommit string
 
 func main() {
-
 	log.DefaultDynamicModuleName(true)
-
 	app := glacier.Create(fmt.Sprintf("%s (%s)", Version, GitCommit))
 
 	app.AddFlags(altsrc.NewInt64Flag(cli.Int64Flag{
