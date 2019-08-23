@@ -9,40 +9,40 @@ import (
 type File struct {
 	Src    string       `json:"src"`
 	Dest   string       `json:"dest"`
-	After  []SyncAction `json:"after"`
-	Before []SyncAction `json:"before"`
+	After  []SyncAction `json:"after,omitempty"`
+	Before []SyncAction `json:"before,omitempty"`
 }
 
 // Rule 规则
 type Rule struct {
 	Action
-	Src string `json:"src"`
+	Src string `json:"src,omitempty"`
 }
 
 // Action 共享动作结构
 type Action struct {
-	Action  string `json:"action"`
-	Match   string `json:"match"`
-	Replace string `json:"replace"`
-	Command string `json:"command"`
+	Action  string `json:"action,omitempty"`
+	Match   string `json:"match,omitempty"`
+	Replace string `json:"replace,omitempty"`
+	Command string `json:"command,omitempty"`
 }
 
 // FileSyncGroup 文件同步组
 type FileSyncGroup struct {
 	Name  string `json:"name"`
 	From  string `json:"from"`
-	Token string `json:"token"`
+	Token string `json:"token,omitempty"`
 
 	Files  []File       `json:"files"`
-	Rules  []Rule       `json:"rules"`
-	Before []SyncAction `json:"before"`
-	After  []SyncAction `json:"after"`
+	Rules  []Rule       `json:"rules,omitempty"`
+	Before []SyncAction `json:"before,omitempty"`
+	After  []SyncAction `json:"after,omitempty"`
 }
 
 // SyncAction 文件同步前置后置任务
 type SyncAction struct {
 	Action
-	When string `json:"when"`
+	When string `json:"when,omitempty"`
 }
 
 // SyncUnit 一个同步组中的一个文件同步

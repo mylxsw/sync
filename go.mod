@@ -23,6 +23,7 @@ require (
 	github.com/mylxsw/hades v0.0.0-20190822153059-6c17d87106c5
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/pkg/errors v0.8.1
+	github.com/satori/go.uuid v1.2.0
 	github.com/siddontang/go v0.0.0-20180604090527-bdc77568d726 // indirect
 	github.com/siddontang/ledisdb v0.0.0-20190202134119-8ceb77e66a92
 	github.com/siddontang/rdb v0.0.0-20150307021120-fc89ed2e418d // indirect
