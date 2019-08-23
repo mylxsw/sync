@@ -14,7 +14,7 @@ type ServiceProvider struct{}
 func (s *ServiceProvider) Register(app *container.Container) {
 	app.MustSingleton(func(conf *config.Config) (*ledis.DB, error) {
 		cfg := lediscfg.NewConfigDefault()
-		cfg.DBPath = conf.DB
+		cfg.DataDir = conf.DB
 
 		conn, err := ledis.Open(cfg)
 		if err != nil {

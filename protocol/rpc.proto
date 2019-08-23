@@ -6,8 +6,8 @@ import "protocol/download.proto";
 import "protocol/sync.proto";
 
 service SyncService {
-    rpc Download (DownloadRequest) returns (stream DownloadResponse) {
+    rpc SyncFile (DownloadRequest) returns (stream DownloadResponse) {
     }
-    rpc Sync (SyncRequest) returns (SyncResponse) {
+    rpc SyncMeta (SyncRequest) returns (SyncResponse) {
     }
 }

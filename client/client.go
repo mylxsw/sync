@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"os/user"
-	"path/filepath"
 	"strconv"
 	"syscall"
 
@@ -16,8 +15,12 @@ import (
 	"github.com/mylxsw/sync/utils"
 )
 
-type FileSync interface {
-	Sync(path string) error
+// FileSyncClient 文件同步客户端接口
+type FileSyncClient interface {
+	// SyncMeta 同步文件元数据
+	SyncMeta(fileToSync File) ([]*protocol.File, error)
+	// SyncFiles 同步文件
+	SyncFiles(files []*protocol.File, savePath func(f *protocol.File) string, syncOwner bool) error
 }
 
 // fileSyncClient 文件同步客户端
@@ -25,25 +28,57 @@ type fileSyncClient struct {
 	client protocol.SyncServiceClient
 }
 
-// NewFileSync 创建一个文件同步客户端
-func NewFileSync(client protocol.SyncServiceClient) FileSync {
+// NewFileSyncClient 创建一个文件同步客户端
+func NewFileSyncClient(client protocol.SyncServiceClient) FileSyncClient {
 	return &fileSyncClient{client: client}
 }
 
-// Sync 执行文件同步
-func (fs *fileSyncClient) Sync(path string) error {
-	resp, err := fs.client.Sync(context.TODO(), &protocol.SyncRequest{Path: path})
+func (fs *fileSyncClient) SyncMeta(fileToSync File) ([]*protocol.File, error) {
+	resp, err := fs.client.SyncMeta(context.TODO(), &protocol.SyncRequest{Path: fileToSync.Src})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	fs.applyFiles(resp.Files, protocol.Type_Directory, func(f *protocol.File, savedFilePath string) error {
-		return os.MkdirAll(savedFilePath, os.FileMode(f.Mode))
-	})
-	fs.applyFiles(resp.Files, protocol.Type_Normal, fs.syncNormalFiles)
-	fs.applyFiles(resp.Files, protocol.Type_Symlink, func(f *protocol.File, savedFilePath string) error {
-		return os.Symlink(f.Symlink, savedFilePath)
-	})
+	return resp.Files, nil
+}
+
+// Sync 执行文件同步
+func (fs *fileSyncClient) SyncFiles(files []*protocol.File, savePath func(f *protocol.File) string, syncOwner bool) error {
+	fs.applyFiles(files, protocol.Type_Directory, func(f *protocol.File, savedFilePath string) error {
+		if err := os.MkdirAll(savedFilePath, os.FileMode(f.Mode)); err != nil {
+			return err
+		}
+
+		if syncOwner {
+			fs.syncFileOwner(savedFilePath, f)
+		}
+
+		return nil
+	}, savePath)
+
+	fs.applyFiles(files, protocol.Type_Normal, func(f *protocol.File, savedFilePath string) error {
+		if err := fs.syncNormalFiles(f, savedFilePath); err != nil {
+			return err
+		}
+
+		if syncOwner {
+			fs.syncFileOwner(savedFilePath, f)
+		}
+
+		return nil
+	}, savePath)
+
+	fs.applyFiles(files, protocol.Type_Symlink, func(f *protocol.File, savedFilePath string) error {
+		if err := os.Symlink(f.Symlink, savedFilePath); err != nil {
+			return err
+		}
+
+		if syncOwner {
+			fs.syncFileOwner(savedFilePath, f)
+		}
+
+		return nil
+	}, savePath)
 
 	return nil
 }
@@ -60,7 +95,7 @@ func (fs *fileSyncClient) syncNormalFiles(f *protocol.File, savedFilePath string
 	}
 
 	if !skipDownload {
-		downloadResp, err := fs.client.Download(context.TODO(), &protocol.DownloadRequest{Filename: f.Path,})
+		downloadResp, err := fs.client.SyncFile(context.TODO(), &protocol.DownloadRequest{Filename: f.Path,})
 		if err != nil {
 			return err
 		}
@@ -89,19 +124,17 @@ func (fs *fileSyncClient) syncNormalFiles(f *protocol.File, savedFilePath string
 }
 
 // applyFiles 批量处理指定类型的文件
-func (fs *fileSyncClient) applyFiles(files []*protocol.File, fileType protocol.Type, cb func(f *protocol.File, savedFilePath string) error) {
+func (fs *fileSyncClient) applyFiles(files []*protocol.File, fileType protocol.Type, cb func(f *protocol.File, savedFilePath string) error, filePath func(f *protocol.File) string) {
 	coll.MustNew(files).Filter(func(f *protocol.File) bool {
 		return f.Type == fileType
 	}).Each(func(f *protocol.File) {
-		// log.Infof("PATH=%s，SIZE=%d，TYPE=%s，CHECKSUM=%s\n", f.Path, f.Size, f.Type.String(), f.Checksum)
-		savedFilePath := filepath.Join("/tmp/", f.Path)
+		// log.Infof("PATH=%s，SIZE=%d，TYPE=%s，CHECKSUM=%s\n", f.Src, f.Size, f.Type.String(), f.Checksum)
+		savedFilePath := filePath(f)
 
 		if err := cb(f, savedFilePath); err != nil {
 			log.Errorf("apply file %s failed: %s", f.Path, err)
 			return
 		}
-
-		fs.syncFileOwner(savedFilePath, f)
 	})
 }
 
@@ -143,7 +176,7 @@ func (fs *fileSyncClient) syncFileOwner(dest string, f *protocol.File) {
 }
 
 // writeFile 创建新文件
-func (fs *fileSyncClient) writeFile(downloadResp protocol.SyncService_DownloadClient, f *protocol.File, savedFilePath string) error {
+func (fs *fileSyncClient) writeFile(downloadResp protocol.SyncService_SyncFileClient, f *protocol.File, savedFilePath string) error {
 	log.Debugf("write file %s with mode=%s, size=%d ...", savedFilePath, os.FileMode(f.Mode), f.Size)
 
 	saveFile, err := os.OpenFile(savedFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(f.Mode))

@@ -23,7 +23,7 @@ func NewSyncServer(bufferSize int64) *SyncServer {
 }
 
 // Download 文件下载服务
-func (s *SyncServer) Download(req *protocol.DownloadRequest, serv protocol.SyncService_DownloadServer) error {
+func (s *SyncServer) SyncFile(req *protocol.DownloadRequest, serv protocol.SyncService_SyncFileServer) error {
 	f, err := os.Open(req.Filename)
 	if err != nil {
 		return errors.Wrapf(err, "can not open such file: %s", req.Filename)
@@ -55,7 +55,7 @@ func (s *SyncServer) Download(req *protocol.DownloadRequest, serv protocol.SyncS
 }
 
 // Sync 文件元信息同步
-func (s *SyncServer) Sync(ctx context.Context, req *protocol.SyncRequest) (*protocol.SyncResponse, error) {
+func (s *SyncServer) SyncMeta(ctx context.Context, req *protocol.SyncRequest) (*protocol.SyncResponse, error) {
 	matches, err := filepath.Glob(req.Path)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid glob expression")

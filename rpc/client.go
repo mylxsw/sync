@@ -10,7 +10,7 @@ import (
 // Factory RPC 客户端创建工厂
 type Factory interface {
 	// SyncClient 创建一个文件同步客户端
-	SyncClient(endpoint string, token string) (client.FileSync, error)
+	SyncClient(endpoint string, token string) (client.FileSyncClient, error)
 }
 
 type factory struct{}
@@ -21,11 +21,11 @@ func NewFactory() Factory {
 }
 
 // SyncClient 创建一个文件同步客户端
-func (factory *factory) SyncClient(endpoint string, token string) (client.FileSync, error) {
+func (factory *factory) SyncClient(endpoint string, token string) (client.FileSyncClient, error) {
 	conn, err := grpc.Dial(endpoint, grpc.WithInsecure(), grpc.WithPerRPCCredentials(NewAuthAPI(token)))
 	if err != nil {
 		return nil, errors.Wrap(err, "can't dial to remote rpc server")
 	}
 
-	return client.NewFileSync(protocol.NewSyncServiceClient(conn)), nil
+	return client.NewFileSyncClient(protocol.NewSyncServiceClient(conn)), nil
 }

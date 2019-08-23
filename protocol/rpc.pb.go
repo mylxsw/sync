@@ -25,16 +25,17 @@ const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 func init() { proto.RegisterFile("protocol/rpc.proto", fileDescriptor_13c0112e17e3b459) }
 
 var fileDescriptor_13c0112e17e3b459 = []byte{
-	// 143 bytes of a gzipped FileDescriptorProto
+	// 150 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0x2a, 0x28, 0xca, 0x2f,
 	0xc9, 0x4f, 0xce, 0xcf, 0xd1, 0x2f, 0x2a, 0x48, 0xd6, 0x03, 0x73, 0x84, 0x38, 0x60, 0x62, 0x52,
 	0xe2, 0x70, 0xd9, 0x94, 0xfc, 0xf2, 0xbc, 0x9c, 0xfc, 0xc4, 0x14, 0x88, 0x12, 0x29, 0x61, 0xb8,
-	0x44, 0x71, 0x65, 0x1e, 0x54, 0x9f, 0x51, 0x2f, 0x23, 0x17, 0x77, 0x70, 0x65, 0x5e, 0x72, 0x70,
-	0x6a, 0x51, 0x59, 0x66, 0x72, 0xaa, 0x90, 0x2b, 0x17, 0x87, 0x0b, 0x54, 0x9b, 0x90, 0xa4, 0x1e,
-	0x4c, 0x87, 0x1e, 0x4c, 0x2c, 0x28, 0xb5, 0xb0, 0x34, 0xb5, 0xb8, 0x44, 0x4a, 0x0a, 0x9b, 0x54,
-	0x71, 0x41, 0x7e, 0x5e, 0x71, 0xaa, 0x12, 0x83, 0x01, 0xa3, 0x90, 0x39, 0x17, 0x0b, 0xc8, 0x54,
-	0x21, 0x51, 0x84, 0x3a, 0x10, 0x1f, 0xa6, 0x5d, 0x0c, 0x5d, 0x18, 0xa6, 0x35, 0x89, 0x0d, 0x2c,
-	0x61, 0x0c, 0x08, 0x00, 0x00, 0xff, 0xff, 0xfe, 0x9b, 0x12, 0xe5, 0xe4, 0x00, 0x00, 0x00,
+	0x44, 0x71, 0x65, 0x1e, 0x54, 0x9f, 0xd1, 0x44, 0x46, 0x2e, 0xee, 0xe0, 0xca, 0xbc, 0xe4, 0xe0,
+	0xd4, 0xa2, 0xb2, 0xcc, 0xe4, 0x54, 0x21, 0x57, 0x2e, 0x0e, 0x10, 0xd7, 0x2d, 0x33, 0x27, 0x55,
+	0x48, 0x52, 0x0f, 0xa6, 0x43, 0xcf, 0x05, 0x6a, 0x54, 0x50, 0x6a, 0x61, 0x69, 0x6a, 0x71, 0x89,
+	0x94, 0x14, 0x36, 0xa9, 0xe2, 0x82, 0xfc, 0xbc, 0xe2, 0x54, 0x25, 0x06, 0x03, 0x46, 0x21, 0x6b,
+	0x88, 0x31, 0xbe, 0xa9, 0x25, 0x89, 0x42, 0xa2, 0x08, 0xb5, 0x20, 0x31, 0x98, 0x11, 0x62, 0xe8,
+	0xc2, 0x30, 0xed, 0x49, 0x6c, 0x60, 0x09, 0x63, 0x40, 0x00, 0x00, 0x00, 0xff, 0xff, 0x8c, 0x87,
+	0x4d, 0xdc, 0xe8, 0x00, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -49,8 +50,8 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type SyncServiceClient interface {
-	Download(ctx context.Context, in *DownloadRequest, opts ...grpc.CallOption) (SyncService_DownloadClient, error)
-	Sync(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*SyncResponse, error)
+	SyncFile(ctx context.Context, in *DownloadRequest, opts ...grpc.CallOption) (SyncService_SyncFileClient, error)
+	SyncMeta(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*SyncResponse, error)
 }
 
 type syncServiceClient struct {
@@ -61,12 +62,12 @@ func NewSyncServiceClient(cc *grpc.ClientConn) SyncServiceClient {
 	return &syncServiceClient{cc}
 }
 
-func (c *syncServiceClient) Download(ctx context.Context, in *DownloadRequest, opts ...grpc.CallOption) (SyncService_DownloadClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_SyncService_serviceDesc.Streams[0], "/protocol.SyncService/Download", opts...)
+func (c *syncServiceClient) SyncFile(ctx context.Context, in *DownloadRequest, opts ...grpc.CallOption) (SyncService_SyncFileClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_SyncService_serviceDesc.Streams[0], "/protocol.SyncService/SyncFile", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &syncServiceDownloadClient{stream}
+	x := &syncServiceSyncFileClient{stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -76,16 +77,16 @@ func (c *syncServiceClient) Download(ctx context.Context, in *DownloadRequest, o
 	return x, nil
 }
 
-type SyncService_DownloadClient interface {
+type SyncService_SyncFileClient interface {
 	Recv() (*DownloadResponse, error)
 	grpc.ClientStream
 }
 
-type syncServiceDownloadClient struct {
+type syncServiceSyncFileClient struct {
 	grpc.ClientStream
 }
 
-func (x *syncServiceDownloadClient) Recv() (*DownloadResponse, error) {
+func (x *syncServiceSyncFileClient) Recv() (*DownloadResponse, error) {
 	m := new(DownloadResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -93,9 +94,9 @@ func (x *syncServiceDownloadClient) Recv() (*DownloadResponse, error) {
 	return m, nil
 }
 
-func (c *syncServiceClient) Sync(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*SyncResponse, error) {
+func (c *syncServiceClient) SyncMeta(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*SyncResponse, error) {
 	out := new(SyncResponse)
-	err := c.cc.Invoke(ctx, "/protocol.SyncService/Sync", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/protocol.SyncService/SyncMeta", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -104,49 +105,49 @@ func (c *syncServiceClient) Sync(ctx context.Context, in *SyncRequest, opts ...g
 
 // SyncServiceServer is the server API for SyncService service.
 type SyncServiceServer interface {
-	Download(*DownloadRequest, SyncService_DownloadServer) error
-	Sync(context.Context, *SyncRequest) (*SyncResponse, error)
+	SyncFile(*DownloadRequest, SyncService_SyncFileServer) error
+	SyncMeta(context.Context, *SyncRequest) (*SyncResponse, error)
 }
 
 func RegisterSyncServiceServer(s *grpc.Server, srv SyncServiceServer) {
 	s.RegisterService(&_SyncService_serviceDesc, srv)
 }
 
-func _SyncService_Download_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _SyncService_SyncFile_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(DownloadRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(SyncServiceServer).Download(m, &syncServiceDownloadServer{stream})
+	return srv.(SyncServiceServer).SyncFile(m, &syncServiceSyncFileServer{stream})
 }
 
-type SyncService_DownloadServer interface {
+type SyncService_SyncFileServer interface {
 	Send(*DownloadResponse) error
 	grpc.ServerStream
 }
 
-type syncServiceDownloadServer struct {
+type syncServiceSyncFileServer struct {
 	grpc.ServerStream
 }
 
-func (x *syncServiceDownloadServer) Send(m *DownloadResponse) error {
+func (x *syncServiceSyncFileServer) Send(m *DownloadResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _SyncService_Sync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _SyncService_SyncMeta_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SyncRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SyncServiceServer).Sync(ctx, in)
+		return srv.(SyncServiceServer).SyncMeta(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/protocol.SyncService/Sync",
+		FullMethod: "/protocol.SyncService/SyncMeta",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SyncServiceServer).Sync(ctx, req.(*SyncRequest))
+		return srv.(SyncServiceServer).SyncMeta(ctx, req.(*SyncRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -156,14 +157,14 @@ var _SyncService_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*SyncServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Sync",
-			Handler:    _SyncService_Sync_Handler,
+			MethodName: "SyncMeta",
+			Handler:    _SyncService_SyncMeta_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "Download",
-			Handler:       _SyncService_Download_Handler,
+			StreamName:    "SyncFile",
+			Handler:       _SyncService_SyncFile_Handler,
 			ServerStreams: true,
 		},
 	},

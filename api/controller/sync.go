@@ -5,6 +5,7 @@ import (
 
 	"github.com/mylxsw/container"
 	"github.com/mylxsw/hades"
+	"github.com/mylxsw/sync/client"
 	"github.com/mylxsw/sync/queue"
 )
 
@@ -23,17 +24,32 @@ func (s *FileSyncController) Register(router *hades.Router) {
 }
 
 func (s *FileSyncController) Sync(ctx *hades.WebContext, req *hades.Request, syncQueue queue.SyncQueue) hades.HTTPResponse {
-	job := queue.FileSyncJob{}
+	group := client.FileSyncGroup{
+		Name:  "sync files",
+		From:  "localhost:8818",
+		Token: "",
+		Files: []client.File {
+			{
+				Src:   "/var/log",
+				Dest:  "/tmp/",
+				After: []client.SyncAction{
+					{
+						Action: client.Action{
+							Command: "systemctl restart all",
+						},
+						When:   "",
+					},	
+				},
+			},
+		},
+	}
 
-	job.Path = req.Input("path")
-	job.ServerAddr = "localhost:8818"
-	job.Token = ""
-
-	if job.Path == "" {
+	if len(group.Files) == 0 {
 		return ctx.Error("invalid path argument", http.StatusUnprocessableEntity)
 	}
 
-	if err := syncQueue.Enqueue(job); err != nil {
+	job := queue.NewFileSyncJob(group)
+	if err := syncQueue.Enqueue(*job); err != nil {
 		return ctx.Error(err.Error(), http.StatusInternalServerError)
 	}
 
