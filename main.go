@@ -10,6 +10,7 @@ import (
 	"github.com/mylxsw/sync/config"
 	"github.com/mylxsw/sync/queue"
 	"github.com/mylxsw/sync/rpc"
+	"github.com/mylxsw/sync/scheduler"
 	"github.com/mylxsw/sync/server"
 	"github.com/mylxsw/sync/storage"
 	"github.com/urfave/cli"
@@ -43,6 +44,11 @@ func main() {
 		Usage: "文件同步 Worker 数量",
 		Value: 3,
 	}))
+	app.AddFlags(altsrc.NewInt64Flag(cli.Int64Flag{
+		Name:  "job_history_keep_size",
+		Usage: "任务执行历史纪录保持数量",
+		Value: 20,
+	}))
 
 	app.Singleton(func(c *cli.Context) *config.Config {
 		return &config.Config{
@@ -50,6 +56,7 @@ func main() {
 			RPCListenAddr:          c.String("rpc_listen_addr"),
 			DB:                     c.String("db"),
 			FileSyncWorkerNum:      c.Int("file_sync_worker_num"),
+			JobHistoryKeepSize:     c.Int64("job_history_keep_size"),
 		}
 	})
 
@@ -60,6 +67,7 @@ func main() {
 	app.Provider(&api.ServiceProvider{})
 	app.Provider(&storage.ServiceProvider{})
 	app.Provider(&queue.ServiceProvider{})
+	app.Provider(&scheduler.ServiceProvider{})
 
 	if err := app.Run(os.Args); err != nil {
 		log.Errorf("exit: %s", err)

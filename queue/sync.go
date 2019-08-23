@@ -49,37 +49,32 @@ func (job *FileSyncJob) Handle(ctx context.Context, rpcFactory rpc.Factory, col 
 		return errors.Wrap(err, "create sync rpc client failed")
 	}
 
-	stageSyncMeta := col.Stage("sync-meta")
-
-	units := make([]client.SyncUnit, 0)
-	for i, f := range job.Payload.Files {
-		files, err := syncClient.SyncMeta(f)
-		if err != nil {
-			stageSyncMeta.Error(fmt.Sprintf("#%d sync meta failed: %s", i, err))
-			return errors.Wrap(err, "sync meta failed")
-		}
-
-		units = append(units, client.SyncUnit{
-			Files:      files,
-			FileToSync: f,
-		})
-
-		stageSyncMeta.Log(fmt.Sprintf("#%d has %d files", i, len(files)))
+	// 同步文件元信息
+	units, err := job.syncMeta(col, syncClient)
+	if err != nil {
+		return err
 	}
 
 	// 分组前置任务
-	stageGroupBefore := col.Stage("group-before")
-	for i, before := range job.Payload.Before {
-		if before.Matched(units) {
-			if err := before.Execute(units); err != nil {
-				stageGroupBefore.Error(fmt.Sprintf("#%d matched, but execute failed: %s", i, err))
-				return errors.Wrap(err, "execute Payload before stage failed")
-			}
-
-			stageGroupBefore.Log(fmt.Sprintf("#%d matched and ok", i))
-		}
+	if err := job.groupBefore(col, units); err != nil {
+		return err
 	}
 
+	// 文件同步
+	if err := job.fileSync(units, col, syncClient); err != nil {
+		return err
+	}
+
+	// 分组后置任务
+	if err := job.groupAfter(col, units); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// fileSync 文件同步
+func (job *FileSyncJob) fileSync(units []client.SyncUnit, col *collector.Collector, syncClient client.FileSyncClient) error {
 	for i, g := range units {
 		// 文件同步前置任务
 		stageSyncBefore := col.Stage(fmt.Sprintf("sync-before-#%d", i))
@@ -115,7 +110,11 @@ func (job *FileSyncJob) Handle(ctx context.Context, rpcFactory rpc.Factory, col 
 		}
 	}
 
-	// 分组后置任务
+	return nil
+}
+
+// groupAfter 同步后分组后置任务
+func (job *FileSyncJob) groupAfter(col *collector.Collector, units []client.SyncUnit) error {
 	stageGroupAfter := col.Stage("group-after")
 	for i, after := range job.Payload.After {
 		if after.Matched(units) {
@@ -129,6 +128,44 @@ func (job *FileSyncJob) Handle(ctx context.Context, rpcFactory rpc.Factory, col 
 	}
 
 	return nil
+}
+
+// groupBefore 同步前分组前置任务
+func (job *FileSyncJob) groupBefore(col *collector.Collector, units []client.SyncUnit) error {
+	stageGroupBefore := col.Stage("group-before")
+	for i, before := range job.Payload.Before {
+		if before.Matched(units) {
+			if err := before.Execute(units); err != nil {
+				stageGroupBefore.Error(fmt.Sprintf("#%d matched, but execute failed: %s", i, err))
+				return errors.Wrap(err, "execute Payload before stage failed")
+			}
+
+			stageGroupBefore.Log(fmt.Sprintf("#%d matched and ok", i))
+		}
+	}
+
+	return nil
+}
+
+// syncMeta 同步文件元信息
+func (job *FileSyncJob) syncMeta(col *collector.Collector, syncClient client.FileSyncClient) ([]client.SyncUnit, error) {
+	stageSyncMeta := col.Stage("sync-meta")
+	units := make([]client.SyncUnit, 0)
+	for i, f := range job.Payload.Files {
+		files, err := syncClient.SyncMeta(f)
+		if err != nil {
+			stageSyncMeta.Error(fmt.Sprintf("#%d sync meta failed: %s", i, err))
+			return nil, errors.Wrap(err, "sync meta failed")
+		}
+
+		units = append(units, client.SyncUnit{
+			Files:      files,
+			FileToSync: f,
+		})
+
+		stageSyncMeta.Log(fmt.Sprintf("#%d has %d files", i, len(files)))
+	}
+	return units, nil
 }
 
 // createSavePathGenerator 创建一个文件保存路径生成器

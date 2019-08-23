@@ -5,4 +5,5 @@ type Config struct {
 	RPCListenAddr          string
 	DB                     string
 	FileSyncWorkerNum      int
+	JobHistoryKeepSize     int64
 }

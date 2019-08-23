@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/codingsince1985/checksum"
+	"github.com/dustin/go-humanize"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/sync/collector"
 	"github.com/mylxsw/sync/protocol"
@@ -127,7 +128,13 @@ func (fs *fileSyncClient) syncNormalFiles(f *protocol.File, savedFilePath string
 			return err
 		}
 
-		stage.Log(fmt.Sprintf("sync file %s -> %s finished, elapse %v， size=%d", f.Path, savedFilePath, time.Now().Sub(startTs), f.Size))
+		stage.Log(fmt.Sprintf(
+			"sync file %s -> %s finished, elapse %v， size=%s",
+			f.Path,
+			savedFilePath,
+			time.Now().Sub(startTs),
+			humanize.Bytes(uint64(f.Size)),
+		))
 	}
 
 	// checksum match confirm
@@ -230,7 +237,7 @@ func (fs *fileSyncClient) syncFileOwner(dest string, f *protocol.File) error {
 
 // writeFile 创建新文件
 func (fs *fileSyncClient) writeFile(downloadResp protocol.SyncService_SyncFileClient, f *protocol.File, savedFilePath string) error {
-	log.Debugf("write file %s with mode=%s, size=%d ...", savedFilePath, os.FileMode(f.Mode), f.Size)
+	log.Debugf("write file %s with mode=%s, size=%s ...", savedFilePath, os.FileMode(f.Mode), humanize.Bytes(uint64(f.Size)))
 
 	saveFile, err := os.OpenFile(savedFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(f.Mode))
 	if err != nil {
@@ -258,6 +265,6 @@ func (fs *fileSyncClient) writeFile(downloadResp protocol.SyncService_SyncFileCl
 		total += cur
 	}
 
-	log.Infof("write file %s, size=%d OK", savedFilePath, total)
+	log.Infof("write file %s, size=%s OK", savedFilePath, humanize.Bytes(uint64(total)))
 	return nil
 }

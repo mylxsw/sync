@@ -10,8 +10,14 @@ import (
 )
 
 type JobHistory interface {
+	// Record 记录 JOB 执行历史
 	Record(name string, jobID string, payload []byte, status string, output []byte) error
+	// Recently 返回最近的 limit 条记录
 	Recently(limit int) ([]JobHistoryItem, error)
+	// Truncate 清空历史纪录
+	Truncate() error
+	// Keep 只保留指定数量的最新记录
+	Keep(keepCount int64) error
 }
 
 type jobHistory struct {
@@ -63,4 +69,22 @@ func (his *jobHistory) Recently(limit int) ([]JobHistoryItem, error) {
 	})
 
 	return hiss, err
+}
+
+func (his *jobHistory) Truncate() error {
+	_, err := his.db.Del([]byte("history"))
+	return err
+}
+
+func (his *jobHistory) Keep(keepCount int64) error {
+	curLen, err := his.db.LLen([]byte("history"))
+	if err != nil {
+		return err
+	}
+
+	if curLen <= keepCount {
+		return nil
+	}
+
+	return his.db.LTrim([]byte("history"), 0, keepCount)
 }

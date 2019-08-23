@@ -28,17 +28,17 @@ func (s *FileSyncController) Sync(ctx *hades.WebContext, req *hades.Request, syn
 		Name:  "sync files",
 		From:  "localhost:8818",
 		Token: "",
-		Files: []client.File {
+		Files: []client.File{
 			{
-				Src:   "/var/log",
-				Dest:  "/tmp/",
+				Src:  "/var/log",
+				Dest: "/tmp/",
 				After: []client.SyncAction{
 					{
 						Action: client.Action{
 							Command: "systemctl restart all",
 						},
-						When:   "",
-					},	
+						When: "",
+					},
 				},
 			},
 		},
@@ -53,5 +53,7 @@ func (s *FileSyncController) Sync(ctx *hades.WebContext, req *hades.Request, syn
 		return ctx.Error(err.Error(), http.StatusInternalServerError)
 	}
 
-	return ctx.API("0000", "ok", nil)
+	return ctx.API("0000", "ok", hades.M{
+		"id": job.ID,
+	})
 }
