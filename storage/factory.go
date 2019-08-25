@@ -4,23 +4,23 @@ import (
 	"github.com/siddontang/ledisdb/ledis"
 )
 
-// QueueFactory 队列工厂接口
-type QueueFactory interface {
-	// Queue 获取队列实例
-	Queue(name string) Queue
+// QueueStoreFactory 队列工厂接口
+type QueueStoreFactory interface {
+	// QueueStore 获取队列实例
+	Queue(name string) QueueStore
 }
 
-// queueFactory 队列工厂实现
-type queueFactory struct {
+// queueStoreFactory 队列工厂实现
+type queueStoreFactory struct {
 	db *ledis.DB
 }
 
-// NewQueueFactory 创建一个队列工厂实例
-func NewQueueFactory(db *ledis.DB) QueueFactory {
-	return &queueFactory{db: db}
+// NewQueueStoreFactory 创建一个队列工厂实例
+func NewQueueStoreFactory(db *ledis.DB) QueueStoreFactory {
+	return &queueStoreFactory{db: db}
 }
 
-// Queue 获取一个队列
-func (factory *queueFactory) Queue(name string) Queue {
-	return NewLedisQueue(factory.db, name)
+// QueueStore 获取一个队列
+func (factory *queueStoreFactory) Queue(name string) QueueStore {
+	return NewLedisQueueStore(factory.db, name)
 }

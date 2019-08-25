@@ -29,10 +29,11 @@ func (s *ServiceProvider) Register(app *container.Container) {
 		return db, nil
 	})
 
-	app.MustSingleton(NewQueueFactory)
+	app.MustSingleton(NewQueueStoreFactory)
 
-	app.MustSingleton(NewJobHistory)
-	app.MustSingleton(NewJobStatusQuery)
+	app.MustSingleton(NewJobHistoryStore)
+	app.MustSingleton(NewJobStatusStore)
+	app.MustSingleton(NewDefinitionStore)
 }
 
 func (s *ServiceProvider) Boot(app *glacier.Glacier) {

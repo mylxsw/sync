@@ -14,7 +14,7 @@ import (
 type ServiceProvider struct{}
 
 func (s *ServiceProvider) Register(app *container.Container) {
-	app.MustSingleton(func(cc *container.Container, factory storage.QueueFactory) SyncQueue {
+	app.MustSingleton(func(cc *container.Container, factory storage.QueueStoreFactory) SyncQueue {
 		return NewSyncQueue(cc, factory.Queue("file-sync"), factory.Queue("file-sync-failed"))
 	})
 }

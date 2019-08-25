@@ -28,7 +28,7 @@ func (h *HistoryController) Register(router *hades.Router) {
 }
 
 // Recently 最近的同步任务历史记录
-func (h *HistoryController) Recently(ctx *hades.WebContext, req *hades.Request, historyStore storage.JobHistory) hades.HTTPResponse {
+func (h *HistoryController) Recently(ctx *hades.WebContext, req *hades.Request, historyStore storage.JobHistoryStore) hades.HTTPResponse {
 	limit := req.IntInput("limit", 10)
 	if limit <= 0 || limit > 100 {
 		return ctx.Error("invalid limit argument", http.StatusUnprocessableEntity)

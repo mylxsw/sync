@@ -9,7 +9,7 @@ import (
 	"github.com/siddontang/ledisdb/ledis"
 )
 
-type JobHistory interface {
+type JobHistoryStore interface {
 	// Record 记录 JOB 执行历史
 	Record(name string, jobID string, payload []byte, status string, output []byte) error
 	// Recently 返回最近的 limit 条记录
@@ -20,12 +20,12 @@ type JobHistory interface {
 	Keep(keepCount int64) error
 }
 
-type jobHistory struct {
+type jobHistoryStore struct {
 	db *ledis.DB
 }
 
-func NewJobHistory(db *ledis.DB) JobHistory {
-	return &jobHistory{db: db}
+func NewJobHistoryStore(db *ledis.DB) JobHistoryStore {
+	return &jobHistoryStore{db: db}
 }
 
 type JobHistoryItem struct {
@@ -37,7 +37,7 @@ type JobHistoryItem struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func (his *jobHistory) Record(name string, jobID string, payload []byte, status string, output []byte) error {
+func (his *jobHistoryStore) Record(name string, jobID string, payload []byte, status string, output []byte) error {
 	data, _ := json.Marshal(JobHistoryItem{
 		ID:        utils.UUID(),
 		Name:      name,
@@ -54,7 +54,7 @@ func (his *jobHistory) Record(name string, jobID string, payload []byte, status 
 	return nil
 }
 
-func (his *jobHistory) Recently(limit int) ([]JobHistoryItem, error) {
+func (his *jobHistoryStore) Recently(limit int) ([]JobHistoryItem, error) {
 	vals, err := his.db.LRange([]byte("history"), 0, int32(limit))
 	if err != nil {
 		return nil, err
@@ -71,12 +71,12 @@ func (his *jobHistory) Recently(limit int) ([]JobHistoryItem, error) {
 	return hiss, err
 }
 
-func (his *jobHistory) Truncate() error {
+func (his *jobHistoryStore) Truncate() error {
 	_, err := his.db.Del([]byte("history"))
 	return err
 }
 
-func (his *jobHistory) Keep(keepCount int64) error {
+func (his *jobHistoryStore) Keep(keepCount int64) error {
 	curLen, err := his.db.LLen([]byte("history"))
 	if err != nil {
 		return err

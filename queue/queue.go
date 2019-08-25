@@ -21,14 +21,21 @@ type SyncQueue interface {
 }
 
 type syncQueue struct {
-	queue       storage.Queue
-	failedQueue storage.Queue
+	queue       storage.QueueStore
+	failedQueue storage.QueueStore
+	statusStore storage.JobStatusStore
 	cc          *container.Container
 }
 
 // NewSyncQueue 创建一个任务队列
-func NewSyncQueue(cc *container.Container, queue storage.Queue, failedQueue storage.Queue) SyncQueue {
-	return &syncQueue{queue: queue, failedQueue: failedQueue, cc: cc}
+func NewSyncQueue(cc *container.Container, queue storage.QueueStore, failedQueue storage.QueueStore) SyncQueue {
+	sq := syncQueue{queue: queue, failedQueue: failedQueue, cc: cc}
+
+	cc.MustResolve(func(statusStore storage.JobStatusStore) {
+		sq.statusStore = statusStore
+	})
+
+	return &sq
 }
 
 func (sq *syncQueue) Enqueue(jobs ...FileSyncJob) error {
@@ -70,7 +77,7 @@ func (sq *syncQueue) Worker(ctx context.Context) {
 // syncJob
 func (sq *syncQueue) syncJob() {
 	var err error
-	var historyRecorder func(jobHistory storage.JobHistory)
+	var historyRecorder func(jobHistory storage.JobHistoryStore)
 	// 创建数据采集器，用于采集 job 执行过程中的输出
 	// 方便记录到执行历史纪录中
 	var col = collector.NewCollector()
@@ -107,9 +114,17 @@ func (sq *syncQueue) syncJob() {
 		"job": job,
 	}).Debugf("processing job %s [%s]", job.Name, job.ID)
 
+	// 更新任务状态
+	if err := sq.statusStore.Update(job.ID, storage.JobStatusRunning); err != nil {
+		log.WithFields(log.Fields{
+			"job":    job,
+			"status": storage.JobStatusRunning,
+		}).Errorf("update job status failed: %s", err)
+	}
+
 	// 初始化任务执行历史纪录函数
 	// 在前面的 defer 中会自动执行该函数
-	historyRecorder = func(jobHistory storage.JobHistory) {
+	historyRecorder = func(jobHistory storage.JobHistoryStore) {
 		status := "ok"
 		if err != nil {
 			status = err.Error()
@@ -119,6 +134,19 @@ func (sq *syncQueue) syncJob() {
 			log.WithFields(log.Fields{
 				"job": job,
 			}).Errorf("record job history failed: %s", err)
+		}
+
+		// 更新任务状态
+		jobStatus := storage.JobStatusOK
+		if status != "ok" {
+			jobStatus = storage.JobStatusFailed
+		}
+
+		if err := sq.statusStore.Update(job.ID, jobStatus); err != nil {
+			log.WithFields(log.Fields{
+				"job":    job,
+				"status": jobStatus,
+			}).Errorf("update job status failed: %s", err)
 		}
 	}
 

@@ -15,6 +15,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/sync/collector"
+	"github.com/mylxsw/sync/meta"
 	"github.com/mylxsw/sync/protocol"
 	"github.com/mylxsw/sync/utils"
 )
@@ -22,7 +23,7 @@ import (
 // FileSyncClient 文件同步客户端接口
 type FileSyncClient interface {
 	// SyncMeta 同步文件元数据
-	SyncMeta(fileToSync File) ([]*protocol.File, error)
+	SyncMeta(fileToSync meta.File) ([]*protocol.File, error)
 	// SyncFiles 同步文件
 	SyncFiles(files []*protocol.File, savePath func(f *protocol.File) string, syncOwner bool, stage *collector.Stage) error
 }
@@ -37,7 +38,7 @@ func NewFileSyncClient(client protocol.SyncServiceClient) FileSyncClient {
 	return &fileSyncClient{client: client}
 }
 
-func (fs *fileSyncClient) SyncMeta(fileToSync File) ([]*protocol.File, error) {
+func (fs *fileSyncClient) SyncMeta(fileToSync meta.File) ([]*protocol.File, error) {
 	resp, err := fs.client.SyncMeta(context.TODO(), &protocol.SyncRequest{Path: fileToSync.Src})
 	if err != nil {
 		return nil, err
