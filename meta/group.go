@@ -1,6 +1,7 @@
 package meta
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -12,36 +13,40 @@ import (
 
 // File 一个待同步的文件
 type File struct {
-	Src    string       `json:"src"`
-	Dest   string       `json:"dest"`
-	After  []SyncAction `json:"after,omitempty"`
-	Before []SyncAction `json:"before,omitempty"`
+	Src    string       `json:"src" yaml:"src"`
+	Dest   string       `json:"dest" yaml:"dest"`
+	After  []SyncAction `json:"after,omitempty" yaml:"after,omitempty"`
+	Before []SyncAction `json:"before,omitempty" yaml:"before,omitempty"`
 }
 
 // Rule 规则
 type Rule struct {
-	Action
-	Src string `json:"src,omitempty"`
-}
-
-// Action 共享动作结构
-type Action struct {
-	Action  string `json:"action,omitempty"`
-	Match   string `json:"match,omitempty"`
-	Replace string `json:"replace,omitempty"`
-	Command string `json:"command,omitempty"`
+	Action  string `json:"action,omitempty" yaml:"action,omitempty"`
+	Match   string `json:"match,omitempty" yaml:"match,omitempty"`
+	Replace string `json:"replace,omitempty" yaml:"replace,omitempty"`
+	Command string `json:"command,omitempty" yaml:"command,omitempty"`
+	Src     string `json:"src,omitempty" yaml:"src,omitempty"`
 }
 
 // FileSyncGroup 文件同步组
 type FileSyncGroup struct {
-	Name  string `json:"name"`
-	From  string `json:"from"`
-	Token string `json:"token,omitempty"`
+	Name  string `json:"name" yaml:"name"`
+	From  string `json:"from" yaml:"from"`
+	Token string `json:"token,omitempty" yaml:"token,omitempty"`
 
-	Files  []File       `json:"files"`
-	Rules  []Rule       `json:"rules,omitempty"`
-	Before []SyncAction `json:"before,omitempty"`
-	After  []SyncAction `json:"after,omitempty"`
+	Files  []File       `json:"files" yaml:"files"`
+	Rules  []Rule       `json:"rules,omitempty" yaml:"rules"`
+	Before []SyncAction `json:"before,omitempty" yaml:"before,omitempty"`
+	After  []SyncAction `json:"after,omitempty" yaml:"after,omitempty"`
+}
+
+func (fsg *FileSyncGroup) Encode() []byte {
+	rs, _ := json.Marshal(fsg)
+	return rs
+}
+
+func (fsg *FileSyncGroup) Decode(data []byte) error {
+	return json.Unmarshal(data, &fsg)
 }
 
 // SyncUnit 一个同步组中的一个文件同步
@@ -52,8 +57,11 @@ type SyncUnit struct {
 
 // SyncAction 文件同步前置后置任务
 type SyncAction struct {
-	Action
-	When string `json:"when,omitempty"`
+	Action  string `json:"action,omitempty" yaml:"action,omitempty"`
+	Match   string `json:"match,omitempty" yaml:"match,omitempty"`
+	Replace string `json:"replace,omitempty" yaml:"replace,omitempty"`
+	Command string `json:"command,omitempty" yaml:"command,omitempty"`
+	When    string `json:"when,omitempty" yaml:"when,omitempty"`
 }
 
 func (after SyncAction) Matched(units []SyncUnit) bool {
@@ -61,7 +69,7 @@ func (after SyncAction) Matched(units []SyncUnit) bool {
 }
 
 func (after SyncAction) Execute(units []SyncUnit, stage *collector.Stage) error {
-	switch after.Action.Action {
+	switch after.Action {
 	case "command":
 		args := strings.Split(after.Command, " ")
 		cmd := executor.New(args[0], args[1:]...)
@@ -74,7 +82,7 @@ func (after SyncAction) Execute(units []SyncUnit, stage *collector.Stage) error 
 			return errors.Wrap(err, fmt.Sprintf("command [%s] execute failed", after.Command))
 		}
 
-		stage.Log(fmt.Sprintf("[%s] %s", after.Command, cmd.StdoutString()))
+		stage.Info(fmt.Sprintf("[%s] %s", after.Command, cmd.StdoutString()))
 	case "replace":
 
 	default:
@@ -83,4 +91,3 @@ func (after SyncAction) Execute(units []SyncUnit, stage *collector.Stage) error 
 
 	return nil
 }
-

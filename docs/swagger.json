@@ -1,0 +1,20 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "文件同步服务",
+        "title": "Sync API",
+        "contact": {
+            "name": "mylxsw",
+            "url": "https://github.com/mylxsw/sync",
+            "email": "mylxsw@aicode.cc"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://raw.githubusercontent.com/mylxsw/sync/master/LICENSE"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8819",
+    "basePath": "/api",
+    "paths": {}
+}

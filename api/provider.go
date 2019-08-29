@@ -5,6 +5,19 @@ import (
 	"github.com/mylxsw/glacier"
 )
 
+// @title Sync API
+// @version 1.0
+// @description 文件同步服务
+
+// @contact.name mylxsw
+// @contact.url https://github.com/mylxsw/sync
+// @contact.email mylxsw@aicode.cc
+
+// @license.name MIT
+// @license.url https://raw.githubusercontent.com/mylxsw/sync/master/LICENSE
+
+// @host localhost:8819
+// @BasePath /api
 type ServiceProvider struct{}
 
 func (s ServiceProvider) Register(app *container.Container) {}

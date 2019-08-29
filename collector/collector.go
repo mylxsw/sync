@@ -3,6 +3,8 @@ package collector
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/mylxsw/asteria/log"
 )
 
 // Collector 数据采集器，用于采集 Job 的输出
@@ -12,6 +14,7 @@ type Collector struct {
 
 // NewCollector 创建一个新的数据采集器
 func NewCollector() *Collector {
+	log.Debug("new collector created, collecting...")
 	return &Collector{Stages: make([]*Stage, 0)}
 }
 
@@ -27,26 +30,29 @@ type StageMessage struct {
 	Message   string    `json:"message"`
 }
 
-// Log 标准输出
-func (s *Stage) Log(message string) {
+// Info 标准输出
+func (s *Stage) Info(message string) {
+	log.Info(message)
 	s.Messages = append(s.Messages, StageMessage{
 		Timestamp: time.Now(),
-		Level:     "LOG",
+		Level:     "INFO",
 		Message:   message,
 	})
 }
 
 // Error 错误输出
 func (s *Stage) Error(message string) {
+	log.Error(message)
 	s.Messages = append(s.Messages, StageMessage{
 		Timestamp: time.Now(),
-		Level:     "ERR",
+		Level:     "ERROR",
 		Message:   message,
 	})
 }
 
 // Stage 创建一个 Stage
 func (col *Collector) Stage(name string) *Stage {
+	log.Infof("---- stage %s ----", name)
 	stage := &Stage{Name: name, Messages: make([]StageMessage, 0)}
 	col.Stages = append(col.Stages, stage)
 	return stage
@@ -54,6 +60,7 @@ func (col *Collector) Stage(name string) *Stage {
 
 // Build 转换为文本输出
 func (col *Collector) Build() []byte {
+	log.Debug("collect finished")
 	res, _ := json.Marshal(col)
 	return res
 }

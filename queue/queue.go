@@ -78,9 +78,7 @@ func (sq *syncQueue) Worker(ctx context.Context) {
 func (sq *syncQueue) syncJob() {
 	var err error
 	var historyRecorder func(jobHistory storage.JobHistoryStore)
-	// 创建数据采集器，用于采集 job 执行过程中的输出
-	// 方便记录到执行历史纪录中
-	var col = collector.NewCollector()
+
 
 	defer func() {
 		if err2 := recover(); err2 != nil {
@@ -97,7 +95,7 @@ func (sq *syncQueue) syncJob() {
 	// 从队列中 pop 一个job
 	// 阻塞执行
 	var data []byte
-	data, err = sq.queue.Dequeue(2 * time.Second)
+	data, err = sq.queue.Dequeue(3 * time.Second)
 	if err != nil {
 		if err != storage.ErrQueueTimeout {
 			log.Errorf("dequeue failed: %s", err)
@@ -124,6 +122,9 @@ func (sq *syncQueue) syncJob() {
 
 	// 初始化任务执行历史纪录函数
 	// 在前面的 defer 中会自动执行该函数
+	// 创建数据采集器，用于采集 job 执行过程中的输出
+	// 方便记录到执行历史纪录中
+	var col = collector.NewCollector()
 	historyRecorder = func(jobHistory storage.JobHistoryStore) {
 		status := "ok"
 		if err != nil {

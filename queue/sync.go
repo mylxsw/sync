@@ -86,7 +86,7 @@ func (job *FileSyncJob) fileSync(units []meta.SyncUnit, col *collector.Collector
 					return errors.Wrap(err, "execute before stage failed")
 				}
 
-				stageSyncBefore.Log(fmt.Sprintf("#%d matched and ok", j))
+				stageSyncBefore.Info(fmt.Sprintf("#%d matched and ok", j))
 			}
 		}
 
@@ -106,7 +106,7 @@ func (job *FileSyncJob) fileSync(units []meta.SyncUnit, col *collector.Collector
 					return errors.Wrap(err, "execute after stage failed")
 				}
 
-				stageSyncAfter.Log(fmt.Sprintf("#%d matched and ok", j))
+				stageSyncAfter.Info(fmt.Sprintf("#%d matched and ok", j))
 			}
 		}
 	}
@@ -124,7 +124,7 @@ func (job *FileSyncJob) groupAfter(col *collector.Collector, units []meta.SyncUn
 				return errors.Wrap(err, "execute Payload before stage failed")
 			}
 
-			stageGroupAfter.Log(fmt.Sprintf("#%d matched and ok", i))
+			stageGroupAfter.Info(fmt.Sprintf("#%d matched and ok", i))
 		}
 	}
 
@@ -141,7 +141,7 @@ func (job *FileSyncJob) groupBefore(col *collector.Collector, units []meta.SyncU
 				return errors.Wrap(err, "execute Payload before stage failed")
 			}
 
-			stageGroupBefore.Log(fmt.Sprintf("#%d matched and ok", i))
+			stageGroupBefore.Info(fmt.Sprintf("#%d matched and ok", i))
 		}
 	}
 
@@ -164,7 +164,7 @@ func (job *FileSyncJob) syncMeta(col *collector.Collector, syncClient client.Fil
 			FileToSync: f,
 		})
 
-		stageSyncMeta.Log(fmt.Sprintf("#%d has %d files", i, len(files)))
+		stageSyncMeta.Info(fmt.Sprintf("#%d has %d files", i, len(files)))
 	}
 	return units, nil
 }

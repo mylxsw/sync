@@ -19,10 +19,10 @@ require (
 	github.com/mylxsw/asteria v0.0.0-20190818103215-f64f703d8999
 	github.com/mylxsw/coll v0.0.0-20190810120926-a7a6f0f4bae8
 	github.com/mylxsw/container v0.0.0-20190810122756-1fd99a90f7c6
-	github.com/mylxsw/glacier v0.0.0-20190822165307-d22f76cd5878
+	github.com/mylxsw/glacier v0.0.0-20190829060854-5eafa4411e29
 	github.com/mylxsw/go-toolkit v0.0.0-20190810132703-486dd5ff72a9
 	github.com/mylxsw/graceful v0.0.0-20190810132432-36a0395cf382
-	github.com/mylxsw/hades v0.0.0-20190822153059-6c17d87106c5
+	github.com/mylxsw/hades v0.0.0-20190829060808-11fb6c20f917
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/robfig/cron v1.2.0
@@ -32,10 +32,11 @@ require (
 	github.com/siddontang/rdb v0.0.0-20150307021120-fc89ed2e418d // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/syndtr/goleveldb v1.0.0 // indirect
-	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586 // indirect
+	golang.org/x/crypto v0.0.0-20190829043050-9756ffdc2472 // indirect
 	golang.org/x/mobile v0.0.0-20190814143026-e8b3e6111d02 // indirect
-	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7 // indirect
-	golang.org/x/tools v0.0.0-20190822000311-fc82fb2afd64 // indirect
+	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297 // indirect
+	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456 // indirect
+	golang.org/x/tools v0.0.0-20190829051458-42f498d34c4d // indirect
 	google.golang.org/api v0.9.0 // indirect
 	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55 // indirect
 	google.golang.org/grpc v1.23.0

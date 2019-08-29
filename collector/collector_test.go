@@ -10,8 +10,8 @@ import (
 func TestCollector_Build(t *testing.T) {
 	coll := collector.NewCollector()
 	stage1 := coll.Stage("test1")
-	stage1.Log("Hello, world")
-	stage1.Log("Thanks")
+	stage1.Info("Hello, world")
+	stage1.Info("Thanks")
 	stage1.Error("Sorry, There are some errors")
 
 	stage2 := coll.Stage("test2")

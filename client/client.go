@@ -55,7 +55,7 @@ func (fs *fileSyncClient) SyncFiles(files []*protocol.File, savePath func(f *pro
 			return fmt.Errorf("create directory %s with permission %s, but failed: %s", savedFilePath, os.FileMode(f.Mode), err)
 		}
 
-		stage.Log(fmt.Sprintf("create directory %s with permission %s", savedFilePath, os.FileMode(f.Mode)))
+		stage.Info(fmt.Sprintf("create directory %s with permission %s", savedFilePath, os.FileMode(f.Mode)))
 
 		if syncOwner {
 			if err := fs.syncFileOwner(savedFilePath, f); err != nil {
@@ -91,7 +91,7 @@ func (fs *fileSyncClient) SyncFiles(files []*protocol.File, savePath func(f *pro
 			return fmt.Errorf("create symlink %s -> %s, but failed: %s", f.Path, savedFilePath, err)
 		}
 
-		stage.Log(fmt.Sprintf("create symlink %s -> %s", f.Path, savedFilePath))
+		stage.Info(fmt.Sprintf("create symlink %s -> %s", f.Path, savedFilePath))
 
 		if syncOwner {
 			if err := fs.syncFileOwner(savedFilePath, f); err != nil {
@@ -113,7 +113,7 @@ func (fs *fileSyncClient) syncNormalFiles(f *protocol.File, savedFilePath string
 	if utils.FileExist(savedFilePath) {
 		finger, _ := checksum.MD5sum(savedFilePath)
 		if finger == f.Checksum {
-			log.Debugf("skip file %s because it already exist", f.Path)
+			stage.Info(fmt.Sprintf("skip file %s because it already exist", f.Path))
 			skipDownload = true
 		}
 	}
@@ -129,7 +129,7 @@ func (fs *fileSyncClient) syncNormalFiles(f *protocol.File, savedFilePath string
 			return err
 		}
 
-		stage.Log(fmt.Sprintf(
+		stage.Info(fmt.Sprintf(
 			"sync file %s -> %s finished, elapse %v， size=%s",
 			f.Path,
 			savedFilePath,
@@ -141,7 +141,6 @@ func (fs *fileSyncClient) syncNormalFiles(f *protocol.File, savedFilePath string
 	// checksum match confirm
 	finger, _ := checksum.MD5sum(savedFilePath)
 	if finger != f.Checksum {
-		log.Errorf("file %s checksum not match, expect %s, but got %s", f.Path, f.Checksum, finger)
 		stage.Error(fmt.Sprintf(
 			"sync file %s -> %s finished, but checksum not match: %s != %s",
 			f.Path,
@@ -154,9 +153,7 @@ func (fs *fileSyncClient) syncNormalFiles(f *protocol.File, savedFilePath string
 	// file mode
 	finfo, _ := os.Stat(savedFilePath)
 	if finfo.Mode() != os.FileMode(f.Mode) {
-		log.Infof("file mode changed for %s, %s -> %s", f.Path, finfo.Mode(), os.FileMode(f.Mode))
 		if err := os.Chmod(savedFilePath, os.FileMode(f.Mode)); err != nil {
-			log.Errorf("change file mode for %s failed: %s", f.Path, err)
 			stage.Error(fmt.Sprintf(
 				"change file mode for %s from %s to %s, but failed: %s",
 				savedFilePath,
@@ -165,7 +162,7 @@ func (fs *fileSyncClient) syncNormalFiles(f *protocol.File, savedFilePath string
 				err,
 			))
 		} else {
-			stage.Log(fmt.Sprintf("change file mode for %s from %s to %s", savedFilePath, finfo.Mode(), os.FileMode(f.Mode)))
+			stage.Info(fmt.Sprintf("change file mode for %s from %s to %s", savedFilePath, finfo.Mode(), os.FileMode(f.Mode)))
 		}
 	}
 

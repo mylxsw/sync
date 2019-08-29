@@ -31,15 +31,15 @@ func (h *HistoryController) Register(router *hades.Router) {
 func (h *HistoryController) Recently(ctx *hades.WebContext, req *hades.Request, historyStore storage.JobHistoryStore) hades.HTTPResponse {
 	limit := req.IntInput("limit", 10)
 	if limit <= 0 || limit > 100 {
-		return ctx.Error("invalid limit argument", http.StatusUnprocessableEntity)
+		return ctx.JSONError("invalid limit argument", http.StatusUnprocessableEntity)
 	}
 
 	items, err := historyStore.Recently(limit)
 	if err != nil {
-		return ctx.Error(err.Error(), http.StatusInternalServerError)
+		return ctx.JSONError(err.Error(), http.StatusInternalServerError)
 	}
 
-	return ctx.API("0000", "ok", coll.MustNew(items).Map(func(item storage.JobHistoryItem) map[string]interface{} {
+	return ctx.JSON(coll.MustNew(items).Map(func(item storage.JobHistoryItem) map[string]interface{} {
 		job := queue.FileSyncJob{}
 		job.Decode(item.Payload)
 

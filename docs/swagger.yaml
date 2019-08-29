@@ -1,0 +1,15 @@
+basePath: /api
+host: localhost:8819
+info:
+  contact:
+    email: mylxsw@aicode.cc
+    name: mylxsw
+    url: https://github.com/mylxsw/sync
+  description: 文件同步服务
+  license:
+    name: MIT
+    url: https://raw.githubusercontent.com/mylxsw/sync/master/LICENSE
+  title: Sync API
+  version: "1.0"
+paths: {}
+swagger: "2.0"
