@@ -6,7 +6,7 @@
   rules: []
   after:
     - action: command
-      command: curl -i https://api.yunsom.com
+      command: curl -i https://baidu.com
 
 - name: sync-php
   from: 127.0.0.1:8818
