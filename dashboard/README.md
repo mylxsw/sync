@@ -1,4 +1,4 @@
-# adanos-dashboard
+# Dashboard
 
 ## Project setup
 ```
