@@ -19,10 +19,10 @@ import (
 
 // FileSyncJob 文件同步任务
 type FileSyncJob struct {
-	ID        string               `json:"id"`
-	Name      string               `json:"name"`
+	ID        string             `json:"id"`
+	Name      string             `json:"name"`
 	Payload   meta.FileSyncGroup `json:"payload"`
-	CreatedAt time.Time            `json:"created_at"`
+	CreatedAt time.Time          `json:"created_at"`
 }
 
 // NewFileSyncJob 创建一个文件同步job

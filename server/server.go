@@ -83,6 +83,7 @@ func (s *SyncServer) SyncMeta(ctx context.Context, req *protocol.SyncRequest) (*
 			Gid:      f.GID,
 			User:     f.User,
 			Group:    f.Group,
+			Symlink:  f.Symlink,
 		}
 	}); err != nil {
 		return nil, errors.Wrap(err, "convert []utils.File to resp.Files failed")

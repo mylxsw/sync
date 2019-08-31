@@ -1,4 +1,132 @@
 basePath: /api
+definitions:
+  collector.Collector:
+    properties:
+      stages:
+        items:
+          $ref: '#/definitions/collector.Stage'
+        type: array
+    type: object
+  collector.Stage:
+    properties:
+      messages:
+        items:
+          $ref: '#/definitions/collector.StageMessage'
+        type: array
+      name:
+        type: string
+    type: object
+  collector.StageMessage:
+    properties:
+      level:
+        type: string
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  controller.History:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      job:
+        $ref: '#/definitions/queue.FileSyncJob'
+        type: object
+      name:
+        type: string
+      output:
+        $ref: '#/definitions/collector.Collector'
+        type: object
+      status:
+        type: string
+    type: object
+  controller.JobStatus:
+    properties:
+      id:
+        type: string
+      status:
+        type: string
+    type: object
+  meta.File:
+    properties:
+      after:
+        items:
+          $ref: '#/definitions/meta.SyncAction'
+        type: array
+      before:
+        items:
+          $ref: '#/definitions/meta.SyncAction'
+        type: array
+      dest:
+        type: string
+      src:
+        type: string
+    type: object
+  meta.FileSyncGroup:
+    properties:
+      after:
+        items:
+          $ref: '#/definitions/meta.SyncAction'
+        type: array
+      before:
+        items:
+          $ref: '#/definitions/meta.SyncAction'
+        type: array
+      files:
+        items:
+          $ref: '#/definitions/meta.File'
+        type: array
+      from:
+        type: string
+      name:
+        type: string
+      rules:
+        items:
+          $ref: '#/definitions/meta.Rule'
+        type: array
+      token:
+        type: string
+    type: object
+  meta.Rule:
+    properties:
+      action:
+        type: string
+      command:
+        type: string
+      match:
+        type: string
+      replace:
+        type: string
+      src:
+        type: string
+    type: object
+  meta.SyncAction:
+    properties:
+      action:
+        type: string
+      command:
+        type: string
+      match:
+        type: string
+      replace:
+        type: string
+      when:
+        type: string
+    type: object
+  queue.FileSyncJob:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      payload:
+        $ref: '#/definitions/meta.FileSyncGroup'
+        type: object
+    type: object
 host: localhost:8819
 info:
   contact:
@@ -11,5 +139,195 @@ info:
     url: https://raw.githubusercontent.com/mylxsw/sync/master/LICENSE
   title: Sync API
   version: "1.0"
-paths: {}
+paths:
+  /:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: 欢迎页面
+  /failed-jobs/:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/queue.FileSyncJob'
+            type: array
+      summary: 返回失败的所有任务
+      tags:
+      - FailedJobs
+  /failed-jobs/{id}/:
+    delete:
+      parameters:
+      - description: 删除失败的 Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/queue.FileSyncJob'
+      summary: 删除失败的任务
+      tags:
+      - FailedJobs
+    put:
+      parameters:
+      - description: 要重试的 Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/queue.FileSyncJob'
+      summary: 重试失败的任务
+      tags:
+      - FailedJobs
+  /histories/:
+    get:
+      parameters:
+      - description: 返回记录数目
+        in: query
+        name: limit
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/controller.History'
+            type: array
+      summary: 查询最近的文件同步记录
+      tags:
+      - Histories
+  /histories/{id}/:
+    get:
+      parameters:
+      - description: 记录ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.History'
+      summary: 返回指定ID的历史纪录详情
+      tags:
+      - Histories
+  /jobs/:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/queue.FileSyncJob'
+            type: array
+      summary: 返回队列中所有任务
+      tags:
+      - Jobs
+    post:
+      parameters:
+      - description: 同步定义名称
+        in: query
+        name: def
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.JobStatus'
+      summary: 发起文件同步任务
+      tags:
+      - Jobs
+  /jobs/{id}/:
+    get:
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.JobStatus'
+      summary: 查询文件同步任务执行状态
+      tags:
+      - Jobs
+  /sync/:
+    get:
+      parameters:
+      - description: 输出格式：yaml/json
+        in: query
+        name: format
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/meta.FileSyncGroup'
+            type: array
+      summary: 查询所有文件同步定义
+      tags:
+      - Sync
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 文件同步定义
+        in: body
+        name: def
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/meta.FileSyncGroup'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/meta.FileSyncGroup'
+            type: array
+      summary: 更新文件同步定义
+      tags:
+      - Sync
+  /sync/{id}/:
+    get:
+      parameters:
+      - description: 定义名称
+        in: query
+        name: id
+        required: true
+        type: string
+      - description: 输出格式：yaml/json
+        in: query
+        name: format
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/meta.FileSyncGroup'
+            type: array
+      summary: 查询单个文件同步定义
+      tags:
+      - Sync
 swagger: "2.0"

@@ -22,14 +22,14 @@ type SyncQueue interface {
 
 type syncQueue struct {
 	queue       storage.QueueStore
-	failedQueue storage.QueueStore
+	failedStore storage.FailedJobStore
 	statusStore storage.JobStatusStore
 	cc          *container.Container
 }
 
 // NewSyncQueue 创建一个任务队列
-func NewSyncQueue(cc *container.Container, queue storage.QueueStore, failedQueue storage.QueueStore) SyncQueue {
-	sq := syncQueue{queue: queue, failedQueue: failedQueue, cc: cc}
+func NewSyncQueue(cc *container.Container, queue storage.QueueStore, failedStore storage.FailedJobStore) SyncQueue {
+	sq := syncQueue{queue: queue, failedStore: failedStore, cc: cc}
 
 	cc.MustResolve(func(statusStore storage.JobStatusStore) {
 		sq.statusStore = statusStore
@@ -79,11 +79,10 @@ func (sq *syncQueue) syncJob() {
 	var err error
 	var historyRecorder func(jobHistory storage.JobHistoryStore)
 
-
 	defer func() {
 		if err2 := recover(); err2 != nil {
-			log.Errorf("worker panic and recovered: %s", err)
-			err = fmt.Errorf("worker panic: %s", err)
+			log.Errorf("worker panic and recovered: %s", err2)
+			err = fmt.Errorf("worker panic: %s", err2)
 		}
 
 		// 记录job执行历史
@@ -161,7 +160,7 @@ func (sq *syncQueue) syncJob() {
 
 		// 任务执行失败，加入到失败队列暂存
 		// TODO 失败队列任务处理
-		if err2 := sq.failedQueue.Enqueue(job.Encode()); err2 != nil {
+		if err2 := sq.failedStore.Add(job.ID, job.Encode()); err2 != nil {
 			log.WithFields(log.Fields{
 				"job": job,
 			}).Errorf("enqueue FileSyncJob to failed queue failed: %s", err)

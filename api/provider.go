@@ -1,8 +1,11 @@
 package api
 
 import (
+	"github.com/gorilla/mux"
 	"github.com/mylxsw/container"
 	"github.com/mylxsw/glacier"
+	_ "github.com/mylxsw/sync/docs"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 // @title Sync API
@@ -24,5 +27,7 @@ func (s ServiceProvider) Register(app *container.Container) {}
 
 func (s ServiceProvider) Boot(app *glacier.Glacier) {
 	app.WebAppRouter(routers(app.Container()))
+	app.WebAppMuxRouter(func(router *mux.Router) {
+		router.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+	})
 }
-

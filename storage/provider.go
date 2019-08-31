@@ -34,6 +34,7 @@ func (s *ServiceProvider) Register(app *container.Container) {
 	app.MustSingleton(NewJobHistoryStore)
 	app.MustSingleton(NewJobStatusStore)
 	app.MustSingleton(NewDefinitionStore)
+	app.MustSingleton(NewFailedJobStore)
 }
 
 func (s *ServiceProvider) Boot(app *glacier.Glacier) {

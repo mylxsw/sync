@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"math"
 	"net"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -23,6 +24,7 @@ func (s *ServiceProvider) Register(app *container.Container) {
 	app.MustSingleton(func(conf *config.Config, cc *container.Container) *grpc.Server {
 		authFunc := s.authFunc(cc)
 		return grpc.NewServer(
+			grpc.MaxRecvMsgSize(math.MaxInt32),
 			grpc_middleware.WithStreamServerChain(
 				grpc_auth.StreamServerInterceptor(authFunc),
 				grpc_recovery.StreamServerInterceptor(),

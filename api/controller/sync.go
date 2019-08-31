@@ -28,9 +28,13 @@ func (s *SyncDefinitionController) Register(router *hades.Router) {
 }
 
 // UpdateDefinitions update sync definitions
-// when content-type == "application/json", parse request body with json
-// when content-type == "application/yaml", parse request body with yaml
-// request body is an array of meta.FileSyncGroup
+// @Summary 更新文件同步定义
+// @Tags Sync
+// @Accept json
+// @Produce json
+// @Param def body []meta.FileSyncGroup true "文件同步定义"
+// @Success 200 {array} meta.FileSyncGroup
+// @Router /sync/ [post]
 func (s *SyncDefinitionController) UpdateDefinitions(ctx *hades.WebContext, req *hades.Request, defStore storage.DefinitionStore) hades.HTTPResponse {
 	var syncGroupDefs []meta.FileSyncGroup
 	if req.ContentType() == "application/yaml" {
@@ -63,14 +67,16 @@ func (s *SyncDefinitionController) UpdateDefinitions(ctx *hades.WebContext, req 
 }
 
 // QueryDefinition get a definition by id
-// Path:
-//     - id
-// Parameters:
-//     - format: json|yaml
+// @Summary 查询单个文件同步定义
+// @Tags Sync
+// @Param id query string true "定义名称"
+// @Param format query string false "输出格式：yaml/json"
+// @Success 200 {array} meta.FileSyncGroup
+// @Router /sync/{id}/ [get]
 func (s *SyncDefinitionController) QueryDefinition(ctx *hades.WebContext, req *hades.Request, defStore storage.DefinitionStore) hades.HTTPResponse {
-	id := req.PathVar("id")
-	if id == "" {
-		return ctx.JSONError("invalid argument id", http.StatusUnprocessableEntity)
+	name := req.PathVar("name")
+	if name == "" {
+		return ctx.JSONError("invalid argument name", http.StatusUnprocessableEntity)
 	}
 
 	resFormat := req.InputWithDefault("format", "json")
@@ -78,7 +84,7 @@ func (s *SyncDefinitionController) QueryDefinition(ctx *hades.WebContext, req *h
 		return ctx.JSONError("invalid format, only support json/yaml", http.StatusUnprocessableEntity)
 	}
 
-	def, err := defStore.Get(id)
+	def, err := defStore.Get(name)
 	if err != nil {
 		if err == storage.ErrNoSuchDefinition {
 			return ctx.JSONError(err.Error(), http.StatusNotFound)
@@ -95,8 +101,11 @@ func (s *SyncDefinitionController) QueryDefinition(ctx *hades.WebContext, req *h
 }
 
 // AllDefinitions return all definitions
-// Parameters:
-//     - format: json|yaml
+// @Summary 查询所有文件同步定义
+// @Tags Sync
+// @Param format query string false "输出格式：yaml/json"
+// @Success 200 {array} meta.FileSyncGroup
+// @Router /sync/ [get]
 func (s *SyncDefinitionController) AllDefinitions(ctx *hades.WebContext, req *hades.Request, defStore storage.DefinitionStore) hades.HTTPResponse {
 	resFormat := req.InputWithDefault("format", "json")
 	if resFormat != "json" && resFormat != "yaml" {

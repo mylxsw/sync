@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"os/user"
 	"strconv"
@@ -18,6 +19,7 @@ import (
 	"github.com/mylxsw/sync/meta"
 	"github.com/mylxsw/sync/protocol"
 	"github.com/mylxsw/sync/utils"
+	"google.golang.org/grpc"
 )
 
 // FileSyncClient 文件同步客户端接口
@@ -39,7 +41,7 @@ func NewFileSyncClient(client protocol.SyncServiceClient) FileSyncClient {
 }
 
 func (fs *fileSyncClient) SyncMeta(fileToSync meta.File) ([]*protocol.File, error) {
-	resp, err := fs.client.SyncMeta(context.TODO(), &protocol.SyncRequest{Path: fileToSync.Src})
+	resp, err := fs.client.SyncMeta(context.TODO(), &protocol.SyncRequest{Path: fileToSync.Src}, grpc.MaxCallRecvMsgSize(math.MaxInt32))
 	if err != nil {
 		return nil, err
 	}
@@ -51,11 +53,13 @@ func (fs *fileSyncClient) SyncMeta(fileToSync meta.File) ([]*protocol.File, erro
 func (fs *fileSyncClient) SyncFiles(files []*protocol.File, savePath func(f *protocol.File) string, syncOwner bool, stage *collector.Stage) error {
 	// 目录同步
 	if err := fs.applyFiles(files, protocol.Type_Directory, func(f *protocol.File, savedFilePath string) error {
-		if err := os.MkdirAll(savedFilePath, os.FileMode(f.Mode)); err != nil {
-			return fmt.Errorf("create directory %s with permission %s, but failed: %s", savedFilePath, os.FileMode(f.Mode), err)
-		}
+		if fs.needCreateDirectory(savedFilePath, f) {
+			if err := os.MkdirAll(savedFilePath, os.FileMode(f.Mode)); err != nil {
+				return fmt.Errorf("create directory %s with permission %s, but failed: %s", savedFilePath, os.FileMode(f.Mode), err)
+			}
 
-		stage.Info(fmt.Sprintf("create directory %s with permission %s", savedFilePath, os.FileMode(f.Mode)))
+			stage.Info(fmt.Sprintf("create directory %s with permission %s", savedFilePath, os.FileMode(f.Mode)))
+		}
 
 		if syncOwner {
 			if err := fs.syncFileOwner(savedFilePath, f); err != nil {
@@ -87,11 +91,13 @@ func (fs *fileSyncClient) SyncFiles(files []*protocol.File, savePath func(f *pro
 
 	// 符号链接同步
 	if err := fs.applyFiles(files, protocol.Type_Symlink, func(f *protocol.File, savedFilePath string) error {
-		if err := os.Symlink(f.Symlink, savedFilePath); err != nil {
-			return fmt.Errorf("create symlink %s -> %s, but failed: %s", f.Path, savedFilePath, err)
-		}
+		if fs.needCreateSymlink(savedFilePath, f) {
+			if err := os.Symlink(f.Symlink, savedFilePath); err != nil {
+				return fmt.Errorf("create symlink %s -> %s, but failed: %s", savedFilePath, f.Symlink, err)
+			}
 
-		stage.Info(fmt.Sprintf("create symlink %s -> %s", f.Path, savedFilePath))
+			stage.Info(fmt.Sprintf("create symlink %s -> %s", savedFilePath, f.Symlink))
+		}
 
 		if syncOwner {
 			if err := fs.syncFileOwner(savedFilePath, f); err != nil {
@@ -107,13 +113,65 @@ func (fs *fileSyncClient) SyncFiles(files []*protocol.File, savePath func(f *pro
 	return nil
 }
 
+// needCreateDirectory 返回是否需要创建目录，如果目录存在，但是权限不一样，会自动修正权限
+func (fs *fileSyncClient) needCreateDirectory(savedFilePath string, f *protocol.File) bool {
+	if utils.FileExist(savedFilePath) {
+		info, err := os.Lstat(savedFilePath)
+		if err != nil {
+			log.Errorf("get file %s info failed: %s", savedFilePath, err)
+		} else {
+			if !info.IsDir() {
+				log.Warningf("file %s is not a directory, we will remove it and recreate as a directory", savedFilePath)
+				if err := os.Remove(savedFilePath); err != nil {
+					log.Errorf("delete file %s failed: %s", savedFilePath, err)
+				}
+
+				return true
+			}
+
+			if info.Mode() != os.FileMode(f.Mode) {
+				// 修改目录权限
+				if err := os.Chmod(savedFilePath, os.FileMode(f.Mode)); err != nil {
+					log.Errorf("can not change file mode for %s: %s", savedFilePath, err)
+				}
+			}
+		}
+
+		return false
+	}
+
+	return true
+}
+
+// needCreateSymlink 返回是否需要创建符号链接，如果符号链接与要同步的数据不一致，则自动删除
+func (fs *fileSyncClient) needCreateSymlink(savedFilePath string, f *protocol.File) bool {
+	skipFile := false
+	if utils.FileExist(savedFilePath) {
+		info, err := os.Lstat(savedFilePath)
+		if err != nil {
+			log.Errorf("get file %s info failed: %s", savedFilePath, err)
+		} else {
+			if info.Mode()&os.ModeSymlink != 0 {
+				link, _ := os.Readlink(savedFilePath)
+				if link == f.Symlink {
+					skipFile = true
+				} else {
+					if err := os.Remove(savedFilePath); err != nil {
+						log.Errorf("failed to remove symlink %s: %s", savedFilePath, err)
+					}
+				}
+			}
+		}
+	}
+	return !skipFile
+}
+
 // syncNormalFiles 同步普通文件
 func (fs *fileSyncClient) syncNormalFiles(f *protocol.File, savedFilePath string, stage *collector.Stage) error {
 	skipDownload := false
 	if utils.FileExist(savedFilePath) {
 		finger, _ := checksum.MD5sum(savedFilePath)
 		if finger == f.Checksum {
-			stage.Info(fmt.Sprintf("skip file %s because it already exist", f.Path))
 			skipDownload = true
 		}
 	}
