@@ -280,7 +280,7 @@
                 }
             }
         },
-        "/sync/{id}/": {
+        "/sync/{name}/": {
             "get": {
                 "tags": [
                     "Sync"

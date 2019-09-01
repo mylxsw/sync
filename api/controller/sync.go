@@ -23,7 +23,7 @@ func (s *SyncDefinitionController) Register(router *hades.Router) {
 	router.Group("/sync", func(router *hades.Router) {
 		router.Get("/", s.AllDefinitions)
 		router.Post("/", s.UpdateDefinitions)
-		router.Get("/{id}/", s.QueryDefinition)
+		router.Get("/{name}/", s.QueryDefinition)
 	})
 }
 
@@ -72,7 +72,7 @@ func (s *SyncDefinitionController) UpdateDefinitions(ctx *hades.WebContext, req 
 // @Param id query string true "定义名称"
 // @Param format query string false "输出格式：yaml/json"
 // @Success 200 {array} meta.FileSyncGroup
-// @Router /sync/{id}/ [get]
+// @Router /sync/{name}/ [get]
 func (s *SyncDefinitionController) QueryDefinition(ctx *hades.WebContext, req *hades.Request, defStore storage.DefinitionStore) hades.HTTPResponse {
 	name := req.PathVar("name")
 	if name == "" {

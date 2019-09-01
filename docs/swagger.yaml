@@ -308,7 +308,7 @@ paths:
       summary: 更新文件同步定义
       tags:
       - Sync
-  /sync/{id}/:
+  /sync/{name}/:
     get:
       parameters:
       - description: 定义名称

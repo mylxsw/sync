@@ -25,4 +25,4 @@ protocol-gen:
 doc:
 	swag init -g api/provider.go
 
-.PHONY: run build protocol-gen doc
+.PHONY: run build protocol-gen doc dashboard dev build-release
