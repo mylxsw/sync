@@ -5,7 +5,7 @@ Vue.use(Vuex);
 
 export default new Vuex.Store({
   state: {
-    serverUrl: localStorage.getItem('server_url') || 'http://localhost:8819',
+    serverUrl: localStorage.getItem('server_url') || '',
   },
   mutations: {
     updateServerUrl: (state, url) => {
