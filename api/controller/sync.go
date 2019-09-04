@@ -24,6 +24,7 @@ func (s *SyncDefinitionController) Register(router *hades.Router) {
 		router.Get("/", s.AllDefinitions)
 		router.Post("/", s.UpdateDefinitions)
 		router.Get("/{name}/", s.QueryDefinition)
+		router.Delete("/{name}/", s.DeleteDefinition)
 	})
 }
 
@@ -66,10 +67,29 @@ func (s *SyncDefinitionController) UpdateDefinitions(ctx *hades.WebContext, req 
 	return ctx.JSON(results)
 }
 
+// DeleteDefinition delete a definition by name
+// @Summary 删除单个文件同步定义
+// @Tags Sync
+// @Param name path string true "定义名称"
+// @Success 200 {string} string
+// @Router /sync/{name}/ [delete]
+func (s *SyncDefinitionController) DeleteDefinition(ctx *hades.WebContext, req *hades.Request, defStore storage.DefinitionStore) hades.HTTPResponse {
+	name := req.PathVar("name")
+	if name == "" {
+		return ctx.JSONError("invalid argument name", http.StatusUnprocessableEntity)
+	}
+
+	if err := defStore.Delete(name); err != nil {
+		return ctx.JSONError(err.Error(), http.StatusInternalServerError)
+	}
+
+	return ctx.JSON(hades.M{})
+}
+
 // QueryDefinition get a definition by id
 // @Summary 查询单个文件同步定义
 // @Tags Sync
-// @Param id query string true "定义名称"
+// @Param name path string true "定义名称"
 // @Param format query string false "输出格式：yaml/json"
 // @Success 200 {array} meta.FileSyncGroup
 // @Router /sync/{name}/ [get]

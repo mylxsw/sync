@@ -1,15 +1,21 @@
 <template>
     <b-row class="mb-5">
         <b-col>
-            <b-table :items="jobs" :fields="fields" v-if="jobs.length > 0">
+            <b-table :items="jobs" :fields="fields" :busy="isBusy" show-empty>
                 <template slot="payload" slot-scope="row">
                     {{ row.item.payload.name }}
                 </template>
                 <template slot="payload" slot-scope="row">
                     {{ row.item.payload.from }}
                 </template>
+                <template slot="empty" slot-scope="scope">
+                    {{ scope.emptyText }}
+                </template>
+                <div slot="table-busy" class="text-center text-danger my-2">
+                    <b-spinner class="align-middle"></b-spinner>
+                    <strong> Loading...</strong>
+                </div>
             </b-table>
-            <div v-if="jobs.length === 0">Nothing</div>
         </b-col>
     </b-row>
 </template>
@@ -22,6 +28,7 @@
         data() {
             return {
                 jobs: [],
+                isBusy: true,
                 fields: [
                     {key: "id", label: "ID"},
                     {key: "created_at", label: "Time"},
@@ -33,15 +40,13 @@
         },
         mounted() {
             axios.get('/api/jobs/').then(response => {
-                if (response.status !== 200) {
-                    this.$bvToast.toast('Load data failed', {
-                        title: 'ERROR',
-                        variant: 'danger'
-                    });
-                    return false;
-                }
-
                 this.jobs = response.data;
+                this.isBusy = false;
+            }).catch(error => {
+                this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
+                    title: 'ERROR',
+                    variant: 'danger'
+                });
             });
         }
     }

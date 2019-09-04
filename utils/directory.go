@@ -5,9 +5,11 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/codingsince1985/checksum"
+	"github.com/mylxsw/coll"
 )
 
 type FileType string
@@ -29,13 +31,39 @@ type File struct {
 	User     string
 	GID      uint32
 	Group    string
+	Base     string
 }
 
 // AllFiles 返回目录/文件下所有的目录/文件
 func AllFiles(dir string) ([]File, error) {
 	files := make([]File, 0)
-	if err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		file := File{Path: path, Size: info.Size(), Mode: uint32(info.Mode())}
+	// 如果指定的目录本身为符号链接，则默认指向其链接的文件、目录
+	// inf, err := os.Lstat(dir)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	//
+	// if inf.Mode()&os.ModeSymlink != 0 {
+	// 	link, _ := os.Readlink(dir)
+	// 	if !strings.HasPrefix(link, "/") {
+	// 		link = filepath.Join(filepath.Dir(dir), link)
+	// 	}
+	//
+	// 	dir = link
+	// }
+	//
+	// if !strings.HasPrefix(dir, "/") {
+	// 	dir = filepath.Clean(dir)
+	// }
+
+	workdir, _ := filepath.EvalSymlinks(dir)
+	if err := filepath.Walk(workdir, func(path string, info os.FileInfo, err error) error {
+		file := File{
+			Path: path,
+			Size: info.Size(),
+			Mode: uint32(info.Mode()),
+			Base: dir,
+		}
 
 		stat, ok := info.Sys().(*syscall.Stat_t)
 		if ok {
@@ -71,6 +99,11 @@ func AllFiles(dir string) ([]File, error) {
 	}); err != nil {
 		return files, err
 	}
+
+	_ = coll.Map(files, &files, func(f File) File {
+		f.Path = strings.TrimLeft(strings.TrimPrefix(f.Path, workdir), "/")
+		return f
+	})
 
 	return files, nil
 }

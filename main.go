@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/mylxsw/asteria/formatter"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier"
 	"github.com/mylxsw/sync/api"
@@ -49,6 +50,15 @@ func main() {
 		Usage: "任务执行历史纪录保持数量",
 		Value: 20,
 	}))
+	app.AddFlags(altsrc.NewBoolTFlag(cli.BoolTFlag{
+		Name:  "console_color",
+		Usage: "彩色日志输出",
+	}))
+
+	app.BeforeInitialize(func(c *cli.Context) error {
+		log.DefaultLogFormatter(formatter.NewDefaultFormatter(c.Bool("console_color")))
+		return nil
+	})
 
 	app.Singleton(func(c *cli.Context) *config.Config {
 		return &config.Config{

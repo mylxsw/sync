@@ -10,6 +10,7 @@ import (
 	"github.com/mylxsw/sync/protocol"
 	"github.com/mylxsw/sync/utils"
 	"github.com/pkg/errors"
+	ignore "github.com/sabhiram/go-gitignore"
 )
 
 // SyncServer 同步服务端实现
@@ -71,6 +72,17 @@ func (s *SyncServer) SyncMeta(ctx context.Context, req *protocol.SyncRequest) (*
 		files = append(files, ffs...)
 	}
 
+	if len(req.Ignores) > 0 {
+		ignorer, err := ignore.CompileIgnoreLines(req.Ignores...)
+		if err != nil {
+			return nil, errors.Wrap(err, "compile ignore lines failed")
+		}
+
+		_ = coll.Filter(files, &files, func(f utils.File) bool {
+			return !ignorer.MatchesPath(f.Path)
+		})
+	}
+
 	resp := protocol.SyncResponse{}
 	if err := coll.Map(files, &resp.Files, func(f utils.File) *protocol.File {
 		return &protocol.File{
@@ -84,6 +96,7 @@ func (s *SyncServer) SyncMeta(ctx context.Context, req *protocol.SyncRequest) (*
 			User:     f.User,
 			Group:    f.Group,
 			Symlink:  f.Symlink,
+			Base:     f.Base,
 		}
 	}); err != nil {
 		return nil, errors.Wrap(err, "convert []utils.File to resp.Files failed")

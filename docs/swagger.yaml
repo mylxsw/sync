@@ -61,6 +61,10 @@ definitions:
         type: array
       dest:
         type: string
+      ignores:
+        items:
+          type: string
+        type: array
       src:
         type: string
     type: object
@@ -309,11 +313,26 @@ paths:
       tags:
       - Sync
   /sync/{name}/:
+    delete:
+      parameters:
+      - description: 定义名称
+        in: path
+        name: name
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: 删除单个文件同步定义
+      tags:
+      - Sync
     get:
       parameters:
       - description: 定义名称
-        in: query
-        name: id
+        in: path
+        name: name
         required: true
         type: string
       - description: 输出格式：yaml/json

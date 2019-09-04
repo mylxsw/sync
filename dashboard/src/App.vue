@@ -39,6 +39,9 @@
         },
         beforeMount() {
             axios.defaults.baseURL = this.$store.getters.serverUrl;
+            axios.interceptors.response.use(function (response) {return response;}, function (error) {
+                return Promise.reject(error);
+            });
         }
     }
 </script>

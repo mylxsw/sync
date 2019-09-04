@@ -13,10 +13,11 @@ import (
 
 // File 一个待同步的文件
 type File struct {
-	Src    string       `json:"src" yaml:"src"`
-	Dest   string       `json:"dest" yaml:"dest"`
-	After  []SyncAction `json:"after,omitempty" yaml:"after,omitempty"`
-	Before []SyncAction `json:"before,omitempty" yaml:"before,omitempty"`
+	Src     string       `json:"src" yaml:"src"`
+	Dest    string       `json:"dest" yaml:"dest"`
+	Ignores []string     `json:"ignores,omitempty" yaml:"ignores,omitempty"`
+	After   []SyncAction `json:"after,omitempty" yaml:"after,omitempty"`
+	Before  []SyncAction `json:"before,omitempty" yaml:"before,omitempty"`
 }
 
 // Rule 规则

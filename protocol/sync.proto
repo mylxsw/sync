@@ -19,10 +19,12 @@ message File {
     uint32 gid = 8;
     string user = 9;
     string group = 10;
+    string base = 11;
 }
 
 message SyncRequest {
     string path = 1;
+    repeated string ignores = 2;
 }
 
 message SyncResponse {

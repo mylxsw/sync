@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"os/user"
+	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
@@ -41,7 +42,7 @@ func NewFileSyncClient(client protocol.SyncServiceClient) FileSyncClient {
 }
 
 func (fs *fileSyncClient) SyncMeta(fileToSync meta.File) ([]*protocol.File, error) {
-	resp, err := fs.client.SyncMeta(context.TODO(), &protocol.SyncRequest{Path: fileToSync.Src}, grpc.MaxCallRecvMsgSize(math.MaxInt32))
+	resp, err := fs.client.SyncMeta(context.TODO(), &protocol.SyncRequest{Path: fileToSync.Src, Ignores: fileToSync.Ignores,}, grpc.MaxCallRecvMsgSize(math.MaxInt32))
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +179,7 @@ func (fs *fileSyncClient) syncNormalFiles(f *protocol.File, savedFilePath string
 
 	if !skipDownload {
 		startTs := time.Now()
-		downloadResp, err := fs.client.SyncFile(context.TODO(), &protocol.DownloadRequest{Filename: f.Path,})
+		downloadResp, err := fs.client.SyncFile(context.TODO(), &protocol.DownloadRequest{Filename: filepath.Join(f.Base, f.Path),})
 		if err != nil {
 			return err
 		}

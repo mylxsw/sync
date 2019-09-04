@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/mylxsw/sync/client"
@@ -170,8 +169,8 @@ func (job *FileSyncJob) syncMeta(col *collector.Collector, syncClient client.Fil
 }
 
 // createSavePathGenerator 创建一个文件保存路径生成器
-func (job *FileSyncJob) createSavePathGenerator(fileToSync meta.File, ) func(f *protocol.File) string {
+func (job *FileSyncJob) createSavePathGenerator(fileToSync meta.File) func(f *protocol.File) string {
 	return func(f *protocol.File) string {
-		return filepath.Join(fileToSync.Dest, strings.TrimPrefix(f.Path, fileToSync.Src))
+		return filepath.Join(fileToSync.Dest, f.Path)
 	}
 }

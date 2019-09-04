@@ -13,6 +13,7 @@ var ErrNoSuchDefinition = errors.New("no such definition")
 // DefinitionStore 同步定义存储接口
 type DefinitionStore interface {
 	Update(def meta.FileSyncGroup) error
+	Delete(name string) error
 	Get(name string) (*meta.FileSyncGroup, error)
 	All() ([]meta.FileSyncGroup, error)
 }
@@ -42,6 +43,11 @@ func (d *definitionStore) Get(name string) (*meta.FileSyncGroup, error) {
 
 	var rs meta.FileSyncGroup
 	return &rs, rs.Decode(data)
+}
+
+func (d *definitionStore) Delete(name string) error {
+	_, err := d.db.HDel([]byte("definition"), []byte(name))
+	return err
 }
 
 func (d *definitionStore) All() ([]meta.FileSyncGroup, error) {

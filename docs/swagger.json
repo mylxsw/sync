@@ -290,8 +290,8 @@
                     {
                         "type": "string",
                         "description": "定义名称",
-                        "name": "id",
-                        "in": "query",
+                        "name": "name",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -309,6 +309,29 @@
                             "items": {
                                 "$ref": "#/definitions/meta.FileSyncGroup"
                             }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Sync"
+                ],
+                "summary": "删除单个文件同步定义",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "定义名称",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }
@@ -408,6 +431,12 @@
                 },
                 "dest": {
                     "type": "string"
+                },
+                "ignores": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "src": {
                     "type": "string"
