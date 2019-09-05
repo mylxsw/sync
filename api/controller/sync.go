@@ -36,7 +36,7 @@ func (s *SyncDefinitionController) Register(router *hades.Router) {
 // @Param def body []meta.FileSyncGroup true "文件同步定义"
 // @Success 200 {array} meta.FileSyncGroup
 // @Router /sync/ [post]
-func (s *SyncDefinitionController) UpdateDefinitions(ctx *hades.WebContext, req *hades.Request, defStore storage.DefinitionStore) hades.HTTPResponse {
+func (s *SyncDefinitionController) UpdateDefinitions(ctx *hades.WebContext, req *hades.HttpRequest, defStore storage.DefinitionStore) hades.HTTPResponse {
 	var syncGroupDefs []meta.FileSyncGroup
 	if req.ContentType() == "application/yaml" {
 		if err := req.UnmarshalYAML(&syncGroupDefs); err != nil {
@@ -73,7 +73,7 @@ func (s *SyncDefinitionController) UpdateDefinitions(ctx *hades.WebContext, req 
 // @Param name path string true "定义名称"
 // @Success 200 {string} string
 // @Router /sync/{name}/ [delete]
-func (s *SyncDefinitionController) DeleteDefinition(ctx *hades.WebContext, req *hades.Request, defStore storage.DefinitionStore) hades.HTTPResponse {
+func (s *SyncDefinitionController) DeleteDefinition(ctx *hades.WebContext, req *hades.HttpRequest, defStore storage.DefinitionStore) hades.HTTPResponse {
 	name := req.PathVar("name")
 	if name == "" {
 		return ctx.JSONError("invalid argument name", http.StatusUnprocessableEntity)
@@ -93,7 +93,7 @@ func (s *SyncDefinitionController) DeleteDefinition(ctx *hades.WebContext, req *
 // @Param format query string false "输出格式：yaml/json"
 // @Success 200 {array} meta.FileSyncGroup
 // @Router /sync/{name}/ [get]
-func (s *SyncDefinitionController) QueryDefinition(ctx *hades.WebContext, req *hades.Request, defStore storage.DefinitionStore) hades.HTTPResponse {
+func (s *SyncDefinitionController) QueryDefinition(ctx *hades.WebContext, req *hades.HttpRequest, defStore storage.DefinitionStore) hades.HTTPResponse {
 	name := req.PathVar("name")
 	if name == "" {
 		return ctx.JSONError("invalid argument name", http.StatusUnprocessableEntity)
@@ -126,7 +126,7 @@ func (s *SyncDefinitionController) QueryDefinition(ctx *hades.WebContext, req *h
 // @Param format query string false "输出格式：yaml/json"
 // @Success 200 {array} meta.FileSyncGroup
 // @Router /sync/ [get]
-func (s *SyncDefinitionController) AllDefinitions(ctx *hades.WebContext, req *hades.Request, defStore storage.DefinitionStore) hades.HTTPResponse {
+func (s *SyncDefinitionController) AllDefinitions(ctx *hades.WebContext, req *hades.HttpRequest, defStore storage.DefinitionStore) hades.HTTPResponse {
 	resFormat := req.InputWithDefault("format", "json")
 	if resFormat != "json" && resFormat != "yaml" {
 		return ctx.JSONError("invalid format, only support json/yaml", http.StatusUnprocessableEntity)

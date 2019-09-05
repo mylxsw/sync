@@ -36,6 +36,16 @@ func main() {
 		Value: ":8818",
 	}))
 	app.AddFlags(altsrc.NewStringFlag(cli.StringFlag{
+		Name:  "rpc_token",
+		Usage: "GRPC 授权 TOKEN，用于其它服务调用本服务时鉴权",
+		Value: "",
+	}))
+	app.AddFlags(altsrc.NewStringFlag(cli.StringFlag{
+		Name:  "api_token",
+		Usage: "API TOKEN，API 接口请求鉴权 TOKEN",
+		Value: "",
+	}))
+	app.AddFlags(altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "db",
 		Usage: "本地数据库存储文件",
 		Value: "/data/sync_db",
@@ -67,6 +77,8 @@ func main() {
 			DB:                     c.String("db"),
 			FileSyncWorkerNum:      c.Int("file_sync_worker_num"),
 			JobHistoryKeepSize:     c.Int64("job_history_keep_size"),
+			RPCToken:               c.String("rpc_token"),
+			APIToken:               c.String("api_token"),
 		}
 	})
 

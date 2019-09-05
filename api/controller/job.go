@@ -45,7 +45,7 @@ type JobStatus struct {
 // @Param id path string true "Job ID"
 // @Success 200 {object} controller.JobStatus
 // @Router /jobs/{id}/ [get]
-func (s *JobController) Status(ctx *hades.WebContext, req *hades.Request, statusStore storage.JobStatusStore) hades.HTTPResponse {
+func (s *JobController) Status(ctx *hades.WebContext, req *hades.HttpRequest, statusStore storage.JobStatusStore) hades.HTTPResponse {
 	jobID := req.PathVar("id")
 	if jobID == "" {
 		return ctx.JSONError("invalid job id", http.StatusUnprocessableEntity)
@@ -66,7 +66,7 @@ func (s *JobController) Status(ctx *hades.WebContext, req *hades.Request, status
 // @Param def query string true "同步定义名称"
 // @Success 200 {object} controller.JobStatus
 // @Router /jobs/ [post]
-func (s *JobController) Sync(ctx *hades.WebContext, req *hades.Request, syncQueue queue.SyncQueue, defStore storage.DefinitionStore, statusStore storage.JobStatusStore) hades.HTTPResponse {
+func (s *JobController) Sync(ctx *hades.WebContext, req *hades.HttpRequest, syncQueue queue.SyncQueue, defStore storage.DefinitionStore, statusStore storage.JobStatusStore) hades.HTTPResponse {
 	def := req.Input("def")
 	if def == "" {
 		return ctx.JSONError("invalid def argument", http.StatusUnprocessableEntity)
@@ -104,7 +104,7 @@ func (s *JobController) Sync(ctx *hades.WebContext, req *hades.Request, syncQueu
 // @Tags Jobs
 // @Success 200 {array} queue.FileSyncJob
 // @Router /jobs/ [get]
-func (s *JobController) Jobs(ctx *hades.WebContext, req *hades.Request, queueStoreFactory storage.QueueStoreFactory) hades.HTTPResponse {
+func (s *JobController) Jobs(ctx *hades.WebContext, req *hades.HttpRequest, queueStoreFactory storage.QueueStoreFactory) hades.HTTPResponse {
 	qs := queueStoreFactory.Queue("file-sync")
 	jobsRaw, err := qs.All()
 	if err != nil {
@@ -124,7 +124,7 @@ func (s *JobController) Jobs(ctx *hades.WebContext, req *hades.Request, queueSto
 // @Tags FailedJobs
 // @Success 200 {array} queue.FileSyncJob
 // @Router /failed-jobs/ [get]
-func (s *JobController) FailedJobs(ctx *hades.WebContext, req *hades.Request, failedJobStore storage.FailedJobStore) hades.HTTPResponse {
+func (s *JobController) FailedJobs(ctx *hades.WebContext, req *hades.HttpRequest, failedJobStore storage.FailedJobStore) hades.HTTPResponse {
 	jobsRaw, err := failedJobStore.All()
 	if err != nil {
 		return ctx.JSONError(err.Error(), http.StatusInternalServerError)
@@ -158,7 +158,7 @@ func (s *JobController) jobs(jobsRaw [][]byte) ([]queue.FileSyncJob, error) {
 // @Param id path string true "删除失败的 Job ID"
 // @Success 200 {object} queue.FileSyncJob
 // @Router /failed-jobs/{id}/ [delete]
-func (s *JobController) DeleteFailedJob(ctx *hades.WebContext, req *hades.Request, failedStore storage.FailedJobStore) hades.HTTPResponse {
+func (s *JobController) DeleteFailedJob(ctx *hades.WebContext, req *hades.HttpRequest, failedStore storage.FailedJobStore) hades.HTTPResponse {
 	id := req.PathVar("id")
 	if id == "" {
 		return ctx.JSONError("id argument required", http.StatusUnprocessableEntity)
@@ -189,7 +189,7 @@ func (s *JobController) DeleteFailedJob(ctx *hades.WebContext, req *hades.Reques
 // @Param id path string true "要重试的 Job ID"
 // @Success 200 {object} queue.FileSyncJob
 // @Router /failed-jobs/{id}/ [put]
-func (s *JobController) RetryJob(ctx *hades.WebContext, req *hades.Request, failedStore storage.FailedJobStore, jobQueue queue.SyncQueue) hades.HTTPResponse {
+func (s *JobController) RetryJob(ctx *hades.WebContext, req *hades.HttpRequest, failedStore storage.FailedJobStore, jobQueue queue.SyncQueue) hades.HTTPResponse {
 	id := req.PathVar("id")
 	if id == "" {
 		return ctx.JSONError("id argument required", http.StatusUnprocessableEntity)

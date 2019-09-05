@@ -16,6 +16,9 @@ import (
 	"github.com/mylxsw/sync/protocol"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 type ServiceProvider struct{}
@@ -68,7 +71,24 @@ func (s *ServiceProvider) Daemon(ctx context.Context, app *glacier.Glacier) {
 
 // authFunc 鉴权中间件
 func (s *ServiceProvider) authFunc(cc *container.Container) func(ctx context.Context) (context.Context, error) {
+	var conf = cc.MustGet(&config.Config{}).(*config.Config)
 	return func(ctx context.Context) (context.Context, error) {
+		if conf.RPCToken != "" {
+			meta, ok := metadata.FromIncomingContext(ctx)
+			if !ok {
+				return ctx, status.Errorf(codes.Unauthenticated, "auth failed: token required")
+			}
+
+			token := meta.Get("token")
+			if len(token) != 1 {
+				return ctx, status.Errorf(codes.Unauthenticated, "auth failed: invalid token")
+			}
+
+			if conf.RPCToken != token[0] {
+				return ctx, status.Errorf(codes.Unauthenticated, "auth failed: token not match")
+			}
+		}
+
 		return ctx, nil
 	}
 }

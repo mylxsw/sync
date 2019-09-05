@@ -18,6 +18,6 @@ func (w *WelcomeController) Register(router *hades.Router) {
 // @Summary 欢迎页面
 // @Success 200 {string} string
 // @Router / [get]
-func (w *WelcomeController) Home(ctx *hades.WebContext, req *hades.Request) string {
+func (w *WelcomeController) Home(ctx *hades.WebContext, req *hades.HttpRequest) string {
 	return "Hello, world"
 }

@@ -28,6 +28,7 @@
 
 <script>
     import axios from 'axios';
+
     export default {
         data() {
             return {
@@ -39,9 +40,10 @@
         },
         beforeMount() {
             axios.defaults.baseURL = this.$store.getters.serverUrl;
-            axios.interceptors.response.use(function (response) {return response;}, function (error) {
-                return Promise.reject(error);
-            });
+            let token = this.$store.getters.token;
+            if (token !== "") {
+                axios.defaults.headers.common['Authorization'] = "Bearer " + token;
+            }
         }
     }
 </script>

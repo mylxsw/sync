@@ -43,7 +43,7 @@ type History struct {
 // @Param limit query int false "返回记录数目"
 // @Success 200 {array} controller.History
 // @Router /histories/ [get]
-func (h *HistoryController) Recently(ctx *hades.WebContext, req *hades.Request, historyStore storage.JobHistoryStore) hades.HTTPResponse {
+func (h *HistoryController) Recently(ctx *hades.WebContext, req *hades.HttpRequest, historyStore storage.JobHistoryStore) hades.HTTPResponse {
 	limit := req.IntInput("limit", 10)
 	if limit <= 0 || limit > 100 {
 		return ctx.JSONError("invalid limit argument", http.StatusUnprocessableEntity)
@@ -74,7 +74,7 @@ func (h *HistoryController) Recently(ctx *hades.WebContext, req *hades.Request, 
 // @Param id path string true "记录ID"
 // @Success 200 {object} controller.History
 // @Router /histories/{id}/ [get]
-func (h *HistoryController) Item(ctx *hades.WebContext, req *hades.Request, historyStore storage.JobHistoryStore) hades.HTTPResponse {
+func (h *HistoryController) Item(ctx *hades.WebContext, req *hades.HttpRequest, historyStore storage.JobHistoryStore) hades.HTTPResponse {
 	id := req.PathVar("id")
 	if id == "" {
 		return ctx.JSONError("invalid argument id", http.StatusUnprocessableEntity)
