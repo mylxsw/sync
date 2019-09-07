@@ -9,7 +9,7 @@ import (
 	"github.com/mylxsw/container"
 	"github.com/mylxsw/hades"
 	"github.com/mylxsw/sync/collector"
-	"github.com/mylxsw/sync/queue"
+	"github.com/mylxsw/sync/queue/job"
 	"github.com/mylxsw/sync/storage"
 )
 
@@ -33,7 +33,7 @@ type History struct {
 	Name      string              `json:"name"`
 	Status    string              `json:"status"`
 	CreatedAt time.Time           `json:"created_at"`
-	Job       queue.FileSyncJob   `json:"job"`
+	Job       job.FileSyncJob     `json:"job"`
 	Output    collector.Collector `json:"output"`
 }
 
@@ -55,15 +55,15 @@ func (h *HistoryController) Recently(ctx *hades.WebContext, req *hades.HttpReque
 	}
 
 	return ctx.JSON(coll.MustNew(items).Map(func(item storage.JobHistoryItem) History {
-		job := queue.FileSyncJob{}
-		job.Decode(item.Payload)
+		j := job.FileSyncJob{}
+		j.Decode(item.Payload)
 
 		return History{
 			ID:        item.ID,
 			Name:      item.Name,
 			Status:    item.Status,
 			CreatedAt: item.CreatedAt,
-			Job:       job,
+			Job:       j,
 		}
 	}).Items())
 }
@@ -87,8 +87,8 @@ func (h *HistoryController) Item(ctx *hades.WebContext, req *hades.HttpRequest, 
 
 	for _, item := range items {
 		if item.ID == id {
-			job := queue.FileSyncJob{}
-			job.Decode(item.Payload)
+			j := job.FileSyncJob{}
+			j.Decode(item.Payload)
 
 			var col collector.Collector
 			_ = json.Unmarshal(item.Output, &col)
@@ -98,7 +98,7 @@ func (h *HistoryController) Item(ctx *hades.WebContext, req *hades.HttpRequest, 
 				Name:      item.Name,
 				Status:    item.Status,
 				CreatedAt: item.CreatedAt,
-				Job:       job,
+				Job:       j,
 				Output:    col,
 			})
 		}

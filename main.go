@@ -23,7 +23,7 @@ var GitCommit string
 
 func main() {
 	log.DefaultDynamicModuleName(true)
-	app := glacier.Create(fmt.Sprintf("%s (%s)", Version, GitCommit))
+	app := glacier.Create(fmt.Sprintf("%s (%s)", Version, GitCommit[:8]))
 
 	app.AddFlags(altsrc.NewInt64Flag(cli.Int64Flag{
 		Name:  "file_transfer_buffer_size",
@@ -64,6 +64,10 @@ func main() {
 		Name:  "console_color",
 		Usage: "彩色日志输出",
 	}))
+	app.AddFlags(altsrc.NewBoolFlag(cli.BoolFlag{
+		Name:  "use_local_dashboard",
+		Usage: "是否使用本地的dashboard目录，启用后，会使用 dashboard/dist/ 目录下的静态资源，开发时使用该选项",
+	}))
 
 	app.BeforeInitialize(func(c *cli.Context) error {
 		log.DefaultLogFormatter(formatter.NewDefaultFormatter(c.Bool("console_color")))
@@ -79,6 +83,7 @@ func main() {
 			JobHistoryKeepSize:     c.Int64("job_history_keep_size"),
 			RPCToken:               c.String("rpc_token"),
 			APIToken:               c.String("api_token"),
+			UseLocalDashboard:      c.Bool("use_local_dashboard"),
 		}
 	})
 

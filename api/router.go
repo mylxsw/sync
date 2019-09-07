@@ -31,7 +31,7 @@ func routers(cc *container.Container) func(router *hades.Router, mw hades.Reques
 		}
 
 		router.Group("/api", func(router *hades.Router) {
-			controller.NewWelcomeController().Register(router)
+			controller.NewWelcomeController(cc).Register(router)
 			controller.NewFileSyncController(cc).Register(router)
 			controller.NewHistoryController(cc).Register(router)
 			controller.NewJobController(cc).Register(router)

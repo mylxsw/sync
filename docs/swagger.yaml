@@ -25,6 +25,20 @@ definitions:
       timestamp:
         type: string
     type: object
+  controller.BulkDeleteReq:
+    properties:
+      names:
+        items:
+          type: string
+        type: array
+    type: object
+  controller.BulkSyncReq:
+    properties:
+      defs:
+        items:
+          type: string
+        type: array
+    type: object
   controller.History:
     properties:
       created_at:
@@ -44,9 +58,16 @@ definitions:
     type: object
   controller.JobStatus:
     properties:
+      definition_name:
+        type: string
       id:
         type: string
       status:
+        type: string
+    type: object
+  controller.WelcomeMessage:
+    properties:
+      version:
         type: string
     type: object
   meta.File:
@@ -150,8 +171,8 @@ paths:
         "200":
           description: OK
           schema:
-            type: string
-      summary: 欢迎页面
+            $ref: '#/definitions/controller.WelcomeMessage'
+      summary: 欢迎页面，API版本信息
   /failed-jobs/:
     get:
       responses:
@@ -228,6 +249,26 @@ paths:
       summary: 返回指定ID的历史纪录详情
       tags:
       - Histories
+  /jobs-bulk/:
+    post:
+      parameters:
+      - description: 同步定义列表
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controller.BulkSyncReq'
+          type: object
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/controller.JobStatus'
+            type: array
+      summary: 批量发起文件同步
+      tags:
+      - Jobs
   /jobs/:
     get:
       responses:
@@ -271,6 +312,24 @@ paths:
       summary: 查询文件同步任务执行状态
       tags:
       - Jobs
+  /sync-bulk/:
+    delete:
+      parameters:
+      - description: 定义名称列表
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controller.BulkDeleteReq'
+          type: object
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: 批量删除同步定义
+      tags:
+      - Sync
   /sync/:
     get:
       parameters:

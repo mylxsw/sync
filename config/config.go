@@ -8,4 +8,5 @@ type Config struct {
 	DB                     string
 	FileSyncWorkerNum      int
 	JobHistoryKeepSize     int64
+	UseLocalDashboard      bool
 }

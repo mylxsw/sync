@@ -36,7 +36,9 @@
             }
         },
         mounted() {
-            this.version = 'v-1000101';
+            axios.get('/api/').then(response => {
+                this.version = response.data.version;
+            });
         },
         beforeMount() {
             axios.defaults.baseURL = this.$store.getters.serverUrl;

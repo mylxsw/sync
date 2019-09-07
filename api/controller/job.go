@@ -8,7 +8,9 @@ import (
 	"github.com/mylxsw/coll"
 	"github.com/mylxsw/container"
 	"github.com/mylxsw/hades"
+	"github.com/mylxsw/sync/meta"
 	"github.com/mylxsw/sync/queue"
+	"github.com/mylxsw/sync/queue/job"
 	"github.com/mylxsw/sync/storage"
 )
 
@@ -27,6 +29,10 @@ func (j *JobController) Register(router *hades.Router) {
 		router.Get("/{id}/", j.Status)
 	})
 
+	router.Group("/jobs-bulk/", func(router *hades.Router) {
+		router.Post("/", j.BulkSync)
+	})
+
 	router.Group("/failed-jobs", func(router *hades.Router) {
 		router.Get("/", j.FailedJobs)
 		router.Put("/{id}/", j.RetryJob)
@@ -35,8 +41,9 @@ func (j *JobController) Register(router *hades.Router) {
 }
 
 type JobStatus struct {
-	ID     string `json:"id"`
-	Status string `json:"status"`
+	ID             string `json:"id"`
+	DefinitionName string `json:"definition_name,omitempty"`
+	Status         string `json:"status"`
 }
 
 // Status 任务执行状态查询
@@ -56,6 +63,60 @@ func (s *JobController) Status(ctx *hades.WebContext, req *hades.HttpRequest, st
 		ID:     jobID,
 		Status: string(jobStatus),
 	})
+}
+
+type BulkSyncReq struct {
+	Defs []string `json:"defs"`
+}
+
+// BulkSync 批量发起文件同步
+// @Summary 批量发起文件同步
+// @Tags Jobs
+// @Param body body controller.BulkSyncReq true "同步定义列表"
+// @Success 200 {array} controller.JobStatus
+// @Router /jobs-bulk/ [post]
+func (s *JobController) BulkSync(ctx *hades.WebContext, syncQueue queue.SyncQueue, defStore storage.DefinitionStore, statusStore storage.JobStatusStore) hades.HTTPResponse {
+	var bulkSyncReq BulkSyncReq
+	if err := ctx.Unmarshal(&bulkSyncReq); err != nil {
+		return ctx.JSONError("invalid request arguments, must be json", http.StatusUnprocessableEntity)
+	}
+
+	var definitions []*meta.FileSyncGroup
+	for _, df := range bulkSyncReq.Defs {
+		def, err := defStore.Get(df)
+		if err != nil {
+			return ctx.JSONError(fmt.Sprintf("query %s failed: %s", df, err.Error()), http.StatusNotFound)
+		}
+
+		definitions = append(definitions, def)
+	}
+
+	jobStatuses := make([]JobStatus, 0)
+	for _, df := range definitions {
+		j := job.NewFileSyncJob(*df)
+
+		// 记录 job 状态，用于异步查询任务执行状态
+		if err := statusStore.Update(j.ID, storage.JobStatusPending); err != nil {
+			log.Errorf("record job status failed: %s", err)
+		}
+
+		if err := syncQueue.Enqueue(*j); err != nil {
+			jobStatuses = append(jobStatuses, JobStatus{
+				ID:             j.ID,
+				DefinitionName: df.Name,
+				Status:         string(storage.JobStatusFailed),
+			})
+			log.Errorf("enqueue job failed: %s", err)
+		} else {
+			jobStatuses = append(jobStatuses, JobStatus{
+				ID:             j.ID,
+				DefinitionName: df.Name,
+				Status:         string(storage.JobStatusPending),
+			})
+		}
+	}
+
+	return ctx.JSON(jobStatuses)
 }
 
 // Sync 发起文件同步
@@ -82,20 +143,21 @@ func (s *JobController) Sync(ctx *hades.WebContext, req *hades.HttpRequest, sync
 	}
 
 	// create file sync job and push to queue
-	job := queue.NewFileSyncJob(*definition)
+	j := job.NewFileSyncJob(*definition)
 
 	// 记录 job 状态，用于异步查询任务执行状态
-	if err := statusStore.Update(job.ID, storage.JobStatusPending); err != nil {
+	if err := statusStore.Update(j.ID, storage.JobStatusPending); err != nil {
 		log.Errorf("record job status failed: %s", err)
 	}
 
-	if err := syncQueue.Enqueue(*job); err != nil {
+	if err := syncQueue.Enqueue(*j); err != nil {
 		return ctx.JSONError(err.Error(), http.StatusInternalServerError)
 	}
 
 	return ctx.JSON(JobStatus{
-		ID:     job.ID,
-		Status: string(storage.JobStatusPending),
+		ID:             j.ID,
+		DefinitionName: definition.Name,
+		Status:         string(storage.JobStatusPending),
 	})
 }
 
@@ -138,13 +200,13 @@ func (s *JobController) FailedJobs(ctx *hades.WebContext, req *hades.HttpRequest
 	return ctx.JSON(jobs)
 }
 
-func (s *JobController) jobs(jobsRaw [][]byte) ([]queue.FileSyncJob, error) {
-	var jobs []queue.FileSyncJob
-	if err := coll.Map(jobsRaw, &jobs, func(raw []byte) queue.FileSyncJob {
-		var job queue.FileSyncJob
-		job.Decode(raw)
+func (s *JobController) jobs(jobsRaw [][]byte) ([]job.FileSyncJob, error) {
+	var jobs []job.FileSyncJob
+	if err := coll.Map(jobsRaw, &jobs, func(raw []byte) job.FileSyncJob {
+		var j job.FileSyncJob
+		j.Decode(raw)
 
-		return job
+		return j
 	}); err != nil {
 		return nil, err
 	}
@@ -173,14 +235,14 @@ func (s *JobController) DeleteFailedJob(ctx *hades.WebContext, req *hades.HttpRe
 		return ctx.JSONError(err.Error(), http.StatusInternalServerError)
 	}
 
-	job := queue.FileSyncJob{}
-	job.Decode(data)
+	j := job.FileSyncJob{}
+	j.Decode(data)
 
-	if err := failedStore.Delete(job.ID); err != nil {
+	if err := failedStore.Delete(j.ID); err != nil {
 		return ctx.JSONError(err.Error(), http.StatusInternalServerError)
 	}
 
-	return ctx.JSON(job)
+	return ctx.JSON(j)
 }
 
 // RetryJob 重试失败的任务
@@ -204,18 +266,18 @@ func (s *JobController) RetryJob(ctx *hades.WebContext, req *hades.HttpRequest, 
 		return ctx.JSONError(err.Error(), http.StatusInternalServerError)
 	}
 
-	job := queue.FileSyncJob{}
-	job.Decode(data)
+	j := job.FileSyncJob{}
+	j.Decode(data)
 
-	if err := jobQueue.Enqueue(job); err != nil {
+	if err := jobQueue.Enqueue(j); err != nil {
 		return ctx.JSONError(fmt.Sprintf("retry job failed: %s", err), http.StatusInternalServerError)
 	}
 
-	if err := failedStore.Delete(job.ID); err != nil {
+	if err := failedStore.Delete(j.ID); err != nil {
 		log.WithFields(log.Fields{
-			"job": job,
+			"job": j,
 		}).Errorf("remove failed job failed: %s", err)
 	}
 
-	return ctx.JSON(job)
+	return ctx.JSON(j)
 }

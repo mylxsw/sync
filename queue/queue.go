@@ -8,6 +8,7 @@ import (
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/container"
 	"github.com/mylxsw/sync/collector"
+	"github.com/mylxsw/sync/queue/job"
 	"github.com/mylxsw/sync/rpc"
 	"github.com/mylxsw/sync/storage"
 )
@@ -15,7 +16,7 @@ import (
 // SyncQueue 任务同步队列接口
 type SyncQueue interface {
 	// Enqueue 添加任务到队列
-	Enqueue(jobs ...FileSyncJob) error
+	Enqueue(jobs ...job.FileSyncJob) error
 	// Worker 执行任务队列消费
 	Worker(ctx context.Context)
 }
@@ -38,7 +39,7 @@ func NewSyncQueue(cc *container.Container, queue storage.QueueStore, failedStore
 	return &sq
 }
 
-func (sq *syncQueue) Enqueue(jobs ...FileSyncJob) error {
+func (sq *syncQueue) Enqueue(jobs ...job.FileSyncJob) error {
 	for _, j := range jobs {
 		log.WithFields(log.Fields{
 			"job": j,
@@ -103,25 +104,25 @@ func (sq *syncQueue) syncJob() {
 		return
 	}
 
-	// 初始化 job
-	job := &FileSyncJob{}
-	job.Decode(data)
+	// 初始化 j
+	j := &job.FileSyncJob{}
+	j.Decode(data)
 
 	log.WithFields(log.Fields{
-		"job": job,
-	}).Debugf("processing job %s [%s]", job.Name, job.ID)
+		"job": j,
+	}).Debugf("processing j %s [%s]", j.Name, j.ID)
 
 	// 更新任务状态
-	if err := sq.statusStore.Update(job.ID, storage.JobStatusRunning); err != nil {
+	if err := sq.statusStore.Update(j.ID, storage.JobStatusRunning); err != nil {
 		log.WithFields(log.Fields{
-			"job":    job,
+			"job":    j,
 			"status": storage.JobStatusRunning,
-		}).Errorf("update job status failed: %s", err)
+		}).Errorf("update j status failed: %s", err)
 	}
 
 	// 初始化任务执行历史纪录函数
 	// 在前面的 defer 中会自动执行该函数
-	// 创建数据采集器，用于采集 job 执行过程中的输出
+	// 创建数据采集器，用于采集 j 执行过程中的输出
 	// 方便记录到执行历史纪录中
 	var col = collector.NewCollector()
 	historyRecorder = func(jobHistory storage.JobHistoryStore) {
@@ -130,10 +131,10 @@ func (sq *syncQueue) syncJob() {
 			status = err.Error()
 		}
 
-		if err := jobHistory.Record(job.Name, job.ID, data, status, col.Build()); err != nil {
+		if err := jobHistory.Record(j.Name, j.ID, data, status, col.Build()); err != nil {
 			log.WithFields(log.Fields{
-				"job": job,
-			}).Errorf("record job history failed: %s", err)
+				"job": j,
+			}).Errorf("record j history failed: %s", err)
 		}
 
 		// 更新任务状态
@@ -142,27 +143,26 @@ func (sq *syncQueue) syncJob() {
 			jobStatus = storage.JobStatusFailed
 		}
 
-		if err := sq.statusStore.Update(job.ID, jobStatus); err != nil {
+		if err := sq.statusStore.Update(j.ID, jobStatus); err != nil {
 			log.WithFields(log.Fields{
-				"job":    job,
+				"job":    j,
 				"status": jobStatus,
-			}).Errorf("update job status failed: %s", err)
+			}).Errorf("update j status failed: %s", err)
 		}
 	}
 
 	// 任务执行
 	if err = sq.cc.ResolveWithError(func(ctx context.Context, rpcFactory rpc.Factory) error {
-		return job.Handle(ctx, rpcFactory, col)
+		return j.Handle(ctx, rpcFactory, col)
 	}); err != nil {
 		log.WithFields(log.Fields{
-			"job": job,
-		}).Errorf("job handle failed: %s", err)
+			"job": j,
+		}).Errorf("j handle failed: %s", err)
 
 		// 任务执行失败，加入到失败队列暂存
-		// TODO 失败队列任务处理
-		if err2 := sq.failedStore.Add(job.ID, job.Encode()); err2 != nil {
+		if err2 := sq.failedStore.Add(j.ID, j.Encode()); err2 != nil {
 			log.WithFields(log.Fields{
-				"job": job,
+				"job": j,
 			}).Errorf("enqueue FileSyncJob to failed queue failed: %s", err)
 		}
 	}

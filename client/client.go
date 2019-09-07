@@ -59,7 +59,7 @@ func (fs *fileSyncClient) SyncFiles(files []*protocol.File, savePath func(f *pro
 				return fmt.Errorf("create directory %s with permission %s, but failed: %s", savedFilePath, os.FileMode(f.Mode), err)
 			}
 
-			stage.Info(fmt.Sprintf("create directory %s with permission %s", savedFilePath, os.FileMode(f.Mode)))
+			stage.Info(fmt.Sprintf("mkdir %s (%s)", savedFilePath, os.FileMode(f.Mode)))
 		}
 
 		if syncOwner {
@@ -97,7 +97,7 @@ func (fs *fileSyncClient) SyncFiles(files []*protocol.File, savePath func(f *pro
 				return fmt.Errorf("create symlink %s -> %s, but failed: %s", savedFilePath, f.Symlink, err)
 			}
 
-			stage.Info(fmt.Sprintf("create symlink %s -> %s", savedFilePath, f.Symlink))
+			stage.Info(fmt.Sprintf("symlink %s -> %s", savedFilePath, f.Symlink))
 		}
 
 		if syncOwner {
@@ -189,7 +189,7 @@ func (fs *fileSyncClient) syncNormalFiles(f *protocol.File, savedFilePath string
 		}
 
 		stage.Info(fmt.Sprintf(
-			"sync file %s -> %s finished, elapse %v， size=%s",
+			"%s -> %s (elapse=%v size=%s)",
 			f.Path,
 			savedFilePath,
 			time.Now().Sub(startTs),
@@ -201,7 +201,7 @@ func (fs *fileSyncClient) syncNormalFiles(f *protocol.File, savedFilePath string
 	finger, _ := checksum.MD5sum(savedFilePath)
 	if finger != f.Checksum {
 		stage.Error(fmt.Sprintf(
-			"sync file %s -> %s finished, but checksum not match: %s != %s",
+			"%s -> %s (checksum not match: %s != %s)",
 			f.Path,
 			savedFilePath,
 			finger,
@@ -214,14 +214,14 @@ func (fs *fileSyncClient) syncNormalFiles(f *protocol.File, savedFilePath string
 	if finfo.Mode() != os.FileMode(f.Mode) {
 		if err := os.Chmod(savedFilePath, os.FileMode(f.Mode)); err != nil {
 			stage.Error(fmt.Sprintf(
-				"change file mode for %s from %s to %s, but failed: %s",
+				"chmod %s (%s -> %s) failed: %s",
 				savedFilePath,
 				finfo.Mode(),
 				os.FileMode(f.Mode),
 				err,
 			))
 		} else {
-			stage.Info(fmt.Sprintf("change file mode for %s from %s to %s", savedFilePath, finfo.Mode(), os.FileMode(f.Mode)))
+			stage.Info(fmt.Sprintf("chmod %s (%s -> %s)", savedFilePath, finfo.Mode(), os.FileMode(f.Mode)))
 		}
 	}
 

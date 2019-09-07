@@ -1,7 +1,7 @@
 <template>
     <b-row class="mb-5">
         <b-col>
-            <b-table :items="jobs" :fields="fields" :busy="isBusy" show-empty>
+            <b-table :items="jobs" :fields="fields" :busy="isBusy" show-empty hover>
                 <template slot="id" slot-scope="row">
                     {{ row.item.name }} <br/>
                     <b>{{ row.item.id }}</b>

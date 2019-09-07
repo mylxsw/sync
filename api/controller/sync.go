@@ -8,6 +8,7 @@ import (
 	"github.com/mylxsw/container"
 	"github.com/mylxsw/hades"
 	"github.com/mylxsw/sync/meta"
+	"github.com/mylxsw/sync/queue"
 	"github.com/mylxsw/sync/storage"
 )
 
@@ -25,6 +26,10 @@ func (s *SyncDefinitionController) Register(router *hades.Router) {
 		router.Post("/", s.UpdateDefinitions)
 		router.Get("/{name}/", s.QueryDefinition)
 		router.Delete("/{name}/", s.DeleteDefinition)
+	})
+
+	router.Group("/sync-bulk/", func(router *hades.Router) {
+		router.Delete("/", s.BulkDelete)
 	})
 }
 
@@ -65,6 +70,31 @@ func (s *SyncDefinitionController) UpdateDefinitions(ctx *hades.WebContext, req 
 	}
 
 	return ctx.JSON(results)
+}
+
+type BulkDeleteReq struct {
+	Names []string `json:"names"`
+}
+
+// BulkDelete 批量删除同步定义
+// @Summary 批量删除同步定义
+// @Tags Sync
+// @Param body body controller.BulkDeleteReq true "定义名称列表"
+// @Success 200 {string} string
+// @Router /sync-bulk/ [delete]
+func (s *SyncDefinitionController) BulkDelete(ctx *hades.WebContext, syncQueue queue.SyncQueue, defStore storage.DefinitionStore, statusStore storage.JobStatusStore) hades.HTTPResponse {
+	var bulkDeleteReq BulkDeleteReq
+	if err := ctx.Unmarshal(&bulkDeleteReq); err != nil {
+		return ctx.JSONError("invalid request arguments, must be json", http.StatusUnprocessableEntity)
+	}
+
+	for _, name := range bulkDeleteReq.Names {
+		if err := defStore.Delete(name); err != nil {
+			return ctx.JSONError(err.Error(), http.StatusInternalServerError)
+		}
+	}
+
+	return ctx.JSON(hades.M{})
 }
 
 // DeleteDefinition delete a definition by name

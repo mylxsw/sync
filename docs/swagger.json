@@ -19,12 +19,12 @@
     "paths": {
         "/": {
             "get": {
-                "summary": "欢迎页面",
+                "summary": "欢迎页面，API版本信息",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/controller.WelcomeMessage"
                         }
                     }
                 }
@@ -149,6 +149,37 @@
                 }
             }
         },
+        "/jobs-bulk/": {
+            "post": {
+                "tags": [
+                    "Jobs"
+                ],
+                "summary": "批量发起文件同步",
+                "parameters": [
+                    {
+                        "description": "同步定义列表",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/controller.BulkSyncReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/controller.JobStatus"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/jobs/": {
             "get": {
                 "tags": [
@@ -211,6 +242,34 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/controller.JobStatus"
+                        }
+                    }
+                }
+            }
+        },
+        "/sync-bulk/": {
+            "delete": {
+                "tags": [
+                    "Sync"
+                ],
+                "summary": "批量删除同步定义",
+                "parameters": [
+                    {
+                        "description": "定义名称列表",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/controller.BulkDeleteReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }
@@ -378,6 +437,28 @@
                 }
             }
         },
+        "controller.BulkDeleteReq": {
+            "type": "object",
+            "properties": {
+                "names": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "controller.BulkSyncReq": {
+            "type": "object",
+            "properties": {
+                "defs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "controller.History": {
             "type": "object",
             "properties": {
@@ -406,10 +487,21 @@
         "controller.JobStatus": {
             "type": "object",
             "properties": {
+                "definition_name": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
                 "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "controller.WelcomeMessage": {
+            "type": "object",
+            "properties": {
+                "version": {
                     "type": "string"
                 }
             }

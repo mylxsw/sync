@@ -1,10 +1,21 @@
 <template>
     <b-row class="mb-5">
         <b-col>
-            <b-button-group class="mb-2">
+            <b-button-toolbar class="mb-2">
                 <b-button variant="primary" v-b-modal.newSyncModel>New Sync Definition</b-button>
-            </b-button-group>
-            <b-table :items="definitions" :busy="isBusy" :fields="fields" show-empty>
+                <b-button variant="info" @click="batch_edit($event.target)" class="ml-2">Bulk Edit</b-button>
+            </b-button-toolbar>
+            <b-table ref="selectableTable" :items="definitions" :busy="isBusy" :fields="fields" show-empty hover selectable select-mode="multi" selected-variant="success" @row-selected="onRowSelected">
+                <template slot="selected" slot-scope="{ rowSelected }">
+                    <template v-if="rowSelected">
+                        <span aria-hidden="true">&check;</span>
+                        <span class="sr-only">Selected</span>
+                    </template>
+                    <template v-else>
+                        <span aria-hidden="true">&nbsp;</span>
+                        <span class="sr-only">Not selected</span>
+                    </template>
+                </template>
                 <template slot="files" slot-scope="row">
                     <b-list-group>
                         <b-list-group-item v-for="(file, index) in row.item.files" :key="index">
@@ -33,6 +44,12 @@
                 </div>
             </b-table>
 
+            <b-button-toolbar class="mt-2" v-if="selected.length > 0">
+                <b-button variant="primary" @click="trigger_jobs()">Execute</b-button>
+                <b-button variant="danger" class="ml-2" @click="delete_syncs()">Delete</b-button>
+                <b-button class="ml-2" @click="$refs.selectableTable.clearSelected()">Reset</b-button>
+            </b-button-toolbar>
+
             <b-modal :id="infoModal.id" :title="infoModal.title" ok-only @hide="resetInfoModal" size="xl">
                 <b-card bg-variant="dark" text-variant="white">
                     <b-card-text>
@@ -60,6 +77,7 @@
                 definitions: [],
                 isBusy: true,
                 fields: [
+                    {key: "selected", label: "Selected"},
                     {key: "name", label: "Name"},
                     {key: "from", label: "From"},
                     {key: "files", label: "Files"},
@@ -72,10 +90,14 @@
                     id: 'info-modal',
                     title: '',
                     content: ''
-                }
+                },
+                selected: [],
             };
         },
         methods: {
+            onRowSelected(items) {
+                this.selected = items
+            },
             /**
              * insert a template to textarea when add new sync definition
              */
@@ -111,7 +133,7 @@
                 }
 
                 this.isBusy = true;
-                axios.post('/api/sync/', this.newSyncModel.content, {headers: {'Content-Type': 'application/yaml'}}).then(response => {
+                axios.post('/api/sync/', this.newSyncModel.content, {headers: {'Content-Type': 'application/yaml'}}).then(() => {
                     this.$bvToast.toast('Successful', {
                         title: "OK",
                         variant: "success",
@@ -121,6 +143,26 @@
                         this.refreshPage();
                         bvModalEvt.vueTarget.hide();
                     });
+                }).catch(error => {
+                    this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
+                        title: 'ERROR',
+                        variant: 'danger'
+                    });
+                });
+            },
+            /**
+             * bulk trigger jobs
+             */
+            trigger_jobs() {
+                if (!confirm('Are you sure to execute all this definitions as jobs ?')) {
+                    return;
+                }
+
+                axios.post("/api/jobs-bulk/", {defs: this.selected.map(item => item.name)}).then(() => {
+                    this.$bvToast.toast('Successful', {
+                        title: 'OK',
+                        variant: 'success',
+                    })
                 }).catch(error => {
                     this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
                         title: 'ERROR',
@@ -151,6 +193,28 @@
                 });
             },
             /**
+             * Bulk delete sync definitions
+             */
+            delete_syncs() {
+                if (!confirm('Are you sure to delete all this definitions ?')) {
+                    return;
+                }
+
+                axios.delete("/api/sync-bulk/", {data: {names: this.selected.map(item => item.name)}}).then(() => {
+                    this.$bvToast.toast('Successful', {
+                        title: 'OK',
+                        variant: 'success',
+                    });
+                    this.isBusy = true;
+                    this.refreshPage();
+                }).catch(error => {
+                    this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
+                        title: 'ERROR',
+                        variant: 'danger'
+                    });
+                });
+            },
+            /**
              * Delete a sync definition
              */
             delete_sync(name) {
@@ -158,13 +222,27 @@
                     return;
                 }
 
-                axios.delete("/api/sync/" + name + "/").then(response => {
+                axios.delete("/api/sync/" + name + "/").then(() => {
                     this.$bvToast.toast('Successful', {
                         title: 'OK',
                         variant: 'success',
                     });
                     this.isBusy = true;
                     this.refreshPage();
+                }).catch(error => {
+                    this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
+                        title: 'ERROR',
+                        variant: 'danger'
+                    });
+                });
+            },
+            /**
+             * batch edit sync definitions
+             */
+            batch_edit(button) {
+                axios.get('/api/sync/', {params:{format: 'yaml'}}).then(response => {
+                    this.newSyncModel.content = response.data;
+                    this.$root.$emit('bv::show::modal', "newSyncModel", button);
                 }).catch(error => {
                     this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
                         title: 'ERROR',

@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/mylxsw/container"
 	"github.com/mylxsw/glacier"
+	"github.com/mylxsw/sync/config"
 	_ "github.com/mylxsw/sync/docs"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
@@ -28,11 +29,13 @@ type ServiceProvider struct{}
 func (s ServiceProvider) Register(app *container.Container) {}
 
 func (s ServiceProvider) Boot(app *glacier.Glacier) {
-	app.WebAppRouter(routers(app.Container()))
-	app.WebAppMuxRouter(func(router *mux.Router) {
-		// Swagger doc
-		router.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
-		// Dashboard
-		router.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(FS(false))))
+	app.MustResolve(func(conf *config.Config) {
+		app.WebAppRouter(routers(app.Container()))
+		app.WebAppMuxRouter(func(router *mux.Router) {
+			// Swagger doc
+			router.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+			// Dashboard
+			router.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(FS(conf.UseLocalDashboard))))
+		})
 	})
 }
