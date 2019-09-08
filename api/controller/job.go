@@ -8,6 +8,7 @@ import (
 	"github.com/mylxsw/coll"
 	"github.com/mylxsw/container"
 	"github.com/mylxsw/hades"
+	"github.com/mylxsw/sync/collector"
 	"github.com/mylxsw/sync/meta"
 	"github.com/mylxsw/sync/queue"
 	"github.com/mylxsw/sync/queue/job"
@@ -37,6 +38,10 @@ func (j *JobController) Register(router *hades.Router) {
 		router.Get("/", j.FailedJobs)
 		router.Put("/{id}/", j.RetryJob)
 		router.Delete("/{id}/", j.DeleteFailedJob)
+	})
+
+	router.Group("/running-jobs", func(router *hades.Router) {
+		router.Get("/", j.RunningJobs)
 	})
 }
 
@@ -164,7 +169,7 @@ func (s *JobController) Sync(ctx *hades.WebContext, req *hades.HttpRequest, sync
 // Jobs 返回队列中所有任务
 // @Summary 返回队列中所有任务
 // @Tags Jobs
-// @Success 200 {array} queue.FileSyncJob
+// @Success 200 {array} job.FileSyncJob
 // @Router /jobs/ [get]
 func (s *JobController) Jobs(ctx *hades.WebContext, req *hades.HttpRequest, queueStoreFactory storage.QueueStoreFactory) hades.HTTPResponse {
 	qs := queueStoreFactory.Queue("file-sync")
@@ -184,7 +189,7 @@ func (s *JobController) Jobs(ctx *hades.WebContext, req *hades.HttpRequest, queu
 // FailedJobs 返回失败的所有任务
 // @Summary 返回失败的所有任务
 // @Tags FailedJobs
-// @Success 200 {array} queue.FileSyncJob
+// @Success 200 {array} job.FileSyncJob
 // @Router /failed-jobs/ [get]
 func (s *JobController) FailedJobs(ctx *hades.WebContext, req *hades.HttpRequest, failedJobStore storage.FailedJobStore) hades.HTTPResponse {
 	jobsRaw, err := failedJobStore.All()
@@ -218,7 +223,7 @@ func (s *JobController) jobs(jobsRaw [][]byte) ([]job.FileSyncJob, error) {
 // @Summary 删除失败的任务
 // @Tags FailedJobs
 // @Param id path string true "删除失败的 Job ID"
-// @Success 200 {object} queue.FileSyncJob
+// @Success 200 {object} job.FileSyncJob
 // @Router /failed-jobs/{id}/ [delete]
 func (s *JobController) DeleteFailedJob(ctx *hades.WebContext, req *hades.HttpRequest, failedStore storage.FailedJobStore) hades.HTTPResponse {
 	id := req.PathVar("id")
@@ -249,7 +254,7 @@ func (s *JobController) DeleteFailedJob(ctx *hades.WebContext, req *hades.HttpRe
 // @Summary 重试失败的任务
 // @Tags FailedJobs
 // @Param id path string true "要重试的 Job ID"
-// @Success 200 {object} queue.FileSyncJob
+// @Success 200 {object} job.FileSyncJob
 // @Router /failed-jobs/{id}/ [put]
 func (s *JobController) RetryJob(ctx *hades.WebContext, req *hades.HttpRequest, failedStore storage.FailedJobStore, jobQueue queue.SyncQueue) hades.HTTPResponse {
 	id := req.PathVar("id")
@@ -280,4 +285,28 @@ func (s *JobController) RetryJob(ctx *hades.WebContext, req *hades.HttpRequest, 
 	}
 
 	return ctx.JSON(j)
+}
+
+// RunningJobs 运行中的任务
+// @Summary 运行中的任务
+// @Tags RunningJobs
+// @Success 200 {array} string
+// @Router /running-jobs/ [get]
+func (s *JobController) RunningJobs(ctx *hades.WebContext, collectors *collector.Collectors) hades.HTTPResponse {
+	return ctx.JSON(collectors.Names())
+}
+
+func (s *JobController) RunningJob(ctx *hades.WebContext, collectors *collector.Collectors) hades.HTTPResponse {
+	jobId := ctx.PathVar("id")
+	if jobId == "" {
+		return ctx.JSONError("invalid job id", http.StatusUnprocessableEntity)
+	}
+
+	col := collectors.Get(jobId)
+	if col == nil {
+		return ctx.JSONError("not found", http.StatusNotFound)
+	}
+
+	// stages := col.AllStages()
+	return ctx.JSON(hades.M{})
 }

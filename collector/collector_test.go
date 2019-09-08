@@ -8,7 +8,9 @@ import (
 )
 
 func TestCollector_Build(t *testing.T) {
-	coll := collector.NewCollector()
+	collectors := collector.NewCollectors()
+
+	coll := collector.NewCollector(collectors, "123")
 	stage1 := coll.Stage("test1")
 	stage1.Info("Hello, world")
 	stage1.Info("Thanks")
@@ -22,4 +24,7 @@ func TestCollector_Build(t *testing.T) {
 
 	assert.NotEmpty(t, coll.Build())
 
+	assert.NotNil(t, collectors.Get("123"))
+	coll.Finish()
+	assert.Nil(t, collectors.Get("123"))
 }

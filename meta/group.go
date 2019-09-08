@@ -3,8 +3,12 @@ package meta
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
+	"os"
+	"os/exec"
+	"path/filepath"
 
+	"github.com/antonmedv/expr"
+	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-toolkit/executor"
 	"github.com/mylxsw/sync/collector"
 	"github.com/mylxsw/sync/protocol"
@@ -65,29 +69,96 @@ type SyncAction struct {
 	When    string `json:"when,omitempty" yaml:"when,omitempty"`
 }
 
-func (after SyncAction) Matched(units []SyncUnit) bool {
-	return after.When == ""
+type SyncMatchData struct {
+	Units []SyncUnit
 }
 
-func (after SyncAction) Execute(units []SyncUnit, stage *collector.Stage) error {
-	switch after.Action {
+// Matched return if the action should be executed base on `When` option
+// If `When` option is empty, we will think the expression is matched as a default behavior,
+// Otherwise we parse the `When` expression
+// If the `When` expression has some error, we just think the expression not match
+func (syncAction SyncAction) Matched(units []SyncUnit) bool {
+	if syncAction.When == "" {
+		return true
+	}
+
+	program, err := expr.Compile(syncAction.When, expr.Env(&SyncMatchData{}), expr.AsBool())
+	if err != nil {
+		log.WithFields(log.Fields{
+			"action": syncAction,
+		}).Errorf("invalid expr, can not compile expr(%s): %s", syncAction.When, err)
+		return false
+	}
+
+	rs, err := expr.Run(program, &SyncMatchData{Units: units})
+	if err != nil {
+		log.WithFields(log.Fields{
+			"action": syncAction,
+		}).Errorf("run expr failed, can not run expr(%s): %s", syncAction.When, err)
+		return false
+	}
+
+	if boolRes, ok := rs.(bool); ok {
+		return boolRes
+	}
+
+	log.WithFields(log.Fields{
+		"action": syncAction,
+	}).Errorf("invalid return value for expr (%s), not a boolean value", syncAction.When)
+
+	return false
+}
+
+// workDir return the work dir for units
+// it will take the first unit in units as a work dir base
+// if the dest file is a directory, return this directory
+// otherwise return the directory of the dest file
+func (syncAction SyncAction) workDir(units []SyncUnit) string {
+	if len(units) > 0 {
+		destStat, err := os.Stat(units[0].FileToSync.Dest)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				log.Errorf("can not get file %s stat, skip work dir setting: %s", units[0].FileToSync.Dest, err)
+			}
+			return ""
+		}
+
+		if destStat.IsDir() {
+			return units[0].FileToSync.Dest
+		} else {
+			return filepath.Dir(units[0].FileToSync.Dest)
+		}
+	}
+
+	return ""
+}
+
+func (syncAction SyncAction) Execute(units []SyncUnit, stage *collector.Stage) error {
+	switch syncAction.Action {
 	case "command":
-		args := strings.Split(after.Command, " ")
-		cmd := executor.New(args[0], args[1:]...)
+		cmd := executor.New("sh", "-c", syncAction.Command)
+		cmd.Init(func(cmd *exec.Cmd) error {
+			workDir := syncAction.workDir(units)
+			if workDir != "" {
+				cmd.Dir = workDir
+			}
+
+			return nil
+		})
 		if ok, err := cmd.Run(); !ok || err != nil {
 			msg := cmd.StderrString()
 			if msg != "" {
-				stage.Error(fmt.Sprintf("[%s] %s", args[0], msg))
+				stage.Error(fmt.Sprintf("[%s] %s", syncAction.Command, msg))
 			}
 
-			return errors.Wrap(err, fmt.Sprintf("command [%s] execute failed", after.Command))
+			return errors.Wrap(err, fmt.Sprintf("command [%s] execute failed", syncAction.Command))
 		}
 
-		stage.Info(fmt.Sprintf("[%s] %s", after.Command, cmd.StdoutString()))
+		stage.Info(fmt.Sprintf("[%s] %s", syncAction.Command, cmd.StdoutString()))
 	case "replace":
 
 	default:
-		stage.Error(fmt.Sprintf("[%s] %s", after.Command, "not support"))
+		stage.Error(fmt.Sprintf("[%s] %s", syncAction.Command, "not support"))
 	}
 
 	return nil

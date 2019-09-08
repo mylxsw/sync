@@ -42,7 +42,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/queue.FileSyncJob"
+                                "$ref": "#/definitions/job.FileSyncJob"
                             }
                         }
                     }
@@ -68,7 +68,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/queue.FileSyncJob"
+                            "$ref": "#/definitions/job.FileSyncJob"
                         }
                     }
                 }
@@ -91,7 +91,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/queue.FileSyncJob"
+                            "$ref": "#/definitions/job.FileSyncJob"
                         }
                     }
                 }
@@ -192,7 +192,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/queue.FileSyncJob"
+                                "$ref": "#/definitions/job.FileSyncJob"
                             }
                         }
                     }
@@ -242,6 +242,25 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/controller.JobStatus"
+                        }
+                    }
+                }
+            }
+        },
+        "/running-jobs/": {
+            "get": {
+                "tags": [
+                    "RunningJobs"
+                ],
+                "summary": "运行中的任务",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -401,6 +420,16 @@
         "collector.Collector": {
             "type": "object",
             "properties": {
+                "collectors": {
+                    "type": "object",
+                    "$ref": "#/definitions/collector.Collectors"
+                },
+                "jobID": {
+                    "type": "string"
+                },
+                "lock": {
+                    "type": "string"
+                },
                 "stages": {
                     "type": "array",
                     "items": {
@@ -409,9 +438,44 @@
                 }
             }
         },
+        "collector.Collectors": {
+            "type": "object",
+            "properties": {
+                "collectors": {
+                    "type": "object"
+                },
+                "lock": {
+                    "type": "string"
+                }
+            }
+        },
+        "collector.Progress": {
+            "type": "object",
+            "properties": {
+                "lock": {
+                    "type": "string"
+                },
+                "max": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
         "collector.Stage": {
             "type": "object",
             "properties": {
+                "col": {
+                    "type": "object",
+                    "$ref": "#/definitions/collector.Collector"
+                },
+                "lock": {
+                    "type": "string"
+                },
+                "max": {
+                    "type": "integer"
+                },
                 "messages": {
                     "type": "array",
                     "items": {
@@ -420,6 +484,16 @@
                 },
                 "name": {
                     "type": "string"
+                },
+                "percentage": {
+                    "type": "number"
+                },
+                "progress": {
+                    "type": "object",
+                    "$ref": "#/definitions/collector.Progress"
+                },
+                "total": {
+                    "type": "integer"
                 }
             }
         },
@@ -470,7 +544,7 @@
                 },
                 "job": {
                     "type": "object",
-                    "$ref": "#/definitions/queue.FileSyncJob"
+                    "$ref": "#/definitions/job.FileSyncJob"
                 },
                 "name": {
                     "type": "string"
@@ -503,6 +577,24 @@
             "properties": {
                 "version": {
                     "type": "string"
+                }
+            }
+        },
+        "job.FileSyncJob": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "payload": {
+                    "type": "object",
+                    "$ref": "#/definitions/meta.FileSyncGroup"
                 }
             }
         },
@@ -610,24 +702,6 @@
                 },
                 "when": {
                     "type": "string"
-                }
-            }
-        },
-        "queue.FileSyncJob": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "payload": {
-                    "type": "object",
-                    "$ref": "#/definitions/meta.FileSyncGroup"
                 }
             }
         }

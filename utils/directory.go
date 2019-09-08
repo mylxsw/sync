@@ -37,25 +37,6 @@ type File struct {
 // AllFiles 返回目录/文件下所有的目录/文件
 func AllFiles(dir string) ([]File, error) {
 	files := make([]File, 0)
-	// 如果指定的目录本身为符号链接，则默认指向其链接的文件、目录
-	// inf, err := os.Lstat(dir)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	//
-	// if inf.Mode()&os.ModeSymlink != 0 {
-	// 	link, _ := os.Readlink(dir)
-	// 	if !strings.HasPrefix(link, "/") {
-	// 		link = filepath.Join(filepath.Dir(dir), link)
-	// 	}
-	//
-	// 	dir = link
-	// }
-	//
-	// if !strings.HasPrefix(dir, "/") {
-	// 	dir = filepath.Clean(dir)
-	// }
-
 	workdir, _ := filepath.EvalSymlinks(dir)
 	if err := filepath.Walk(workdir, func(path string, info os.FileInfo, err error) error {
 		file := File{

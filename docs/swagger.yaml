@@ -2,19 +2,56 @@ basePath: /api
 definitions:
   collector.Collector:
     properties:
+      collectors:
+        $ref: '#/definitions/collector.Collectors'
+        type: object
+      jobID:
+        type: string
+      lock:
+        type: string
       stages:
         items:
           $ref: '#/definitions/collector.Stage'
         type: array
     type: object
+  collector.Collectors:
+    properties:
+      collectors:
+        type: object
+      lock:
+        type: string
+    type: object
+  collector.Progress:
+    properties:
+      lock:
+        type: string
+      max:
+        type: integer
+      total:
+        type: integer
+    type: object
   collector.Stage:
     properties:
+      col:
+        $ref: '#/definitions/collector.Collector'
+        type: object
+      lock:
+        type: string
+      max:
+        type: integer
       messages:
         items:
           $ref: '#/definitions/collector.StageMessage'
         type: array
       name:
         type: string
+      percentage:
+        type: number
+      progress:
+        $ref: '#/definitions/collector.Progress'
+        type: object
+      total:
+        type: integer
     type: object
   collector.StageMessage:
     properties:
@@ -46,7 +83,7 @@ definitions:
       id:
         type: string
       job:
-        $ref: '#/definitions/queue.FileSyncJob'
+        $ref: '#/definitions/job.FileSyncJob'
         type: object
       name:
         type: string
@@ -69,6 +106,18 @@ definitions:
     properties:
       version:
         type: string
+    type: object
+  job.FileSyncJob:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      payload:
+        $ref: '#/definitions/meta.FileSyncGroup'
+        type: object
     type: object
   meta.File:
     properties:
@@ -140,18 +189,6 @@ definitions:
       when:
         type: string
     type: object
-  queue.FileSyncJob:
-    properties:
-      created_at:
-        type: string
-      id:
-        type: string
-      name:
-        type: string
-      payload:
-        $ref: '#/definitions/meta.FileSyncGroup'
-        type: object
-    type: object
 host: localhost:8819
 info:
   contact:
@@ -180,7 +217,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/queue.FileSyncJob'
+              $ref: '#/definitions/job.FileSyncJob'
             type: array
       summary: 返回失败的所有任务
       tags:
@@ -197,7 +234,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/queue.FileSyncJob'
+            $ref: '#/definitions/job.FileSyncJob'
       summary: 删除失败的任务
       tags:
       - FailedJobs
@@ -212,7 +249,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/queue.FileSyncJob'
+            $ref: '#/definitions/job.FileSyncJob'
       summary: 重试失败的任务
       tags:
       - FailedJobs
@@ -276,7 +313,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/queue.FileSyncJob'
+              $ref: '#/definitions/job.FileSyncJob'
             type: array
       summary: 返回队列中所有任务
       tags:
@@ -312,6 +349,18 @@ paths:
       summary: 查询文件同步任务执行状态
       tags:
       - Jobs
+  /running-jobs/:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+      summary: 运行中的任务
+      tags:
+      - RunningJobs
   /sync-bulk/:
     delete:
       parameters:

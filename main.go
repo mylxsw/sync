@@ -8,6 +8,7 @@ import (
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier"
 	"github.com/mylxsw/sync/api"
+	"github.com/mylxsw/sync/collector"
 	"github.com/mylxsw/sync/config"
 	"github.com/mylxsw/sync/queue"
 	"github.com/mylxsw/sync/rpc"
@@ -95,6 +96,7 @@ func main() {
 	app.Provider(&storage.ServiceProvider{})
 	app.Provider(&queue.ServiceProvider{})
 	app.Provider(&scheduler.ServiceProvider{})
+	app.Provider(&collector.ServiceProvider{})
 
 	if err := app.Run(os.Args); err != nil {
 		log.Errorf("exit: %s", err)

@@ -16,3 +16,5 @@
 .vscode/
 bin/
 build/
+.ansible/
+Makefile.local

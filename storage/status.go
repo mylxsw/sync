@@ -13,10 +13,11 @@ const StatusKeepDuration int64 = 24 * 3600
 type JobStatus string
 
 const (
-	JobStatusPending JobStatus = "pending"
-	JobStatusRunning JobStatus = "running"
-	JobStatusFailed  JobStatus = "failed"
-	JobStatusOK      JobStatus = "ok"
+	JobStatusPending  JobStatus = "pending"
+	JobStatusRunning  JobStatus = "running"
+	JobStatusUnstable JobStatus = "unstable"
+	JobStatusFailed   JobStatus = "failed"
+	JobStatusOK       JobStatus = "ok"
 )
 
 // JobStatusStore 任务执行状态查询

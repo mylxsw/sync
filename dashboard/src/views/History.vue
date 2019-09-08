@@ -7,7 +7,7 @@
                     <b>{{ row.item.id }}</b>
                 </template>
                 <template slot="status" slot-scope="row">
-                    <b-badge :variant="row.item.status === 'ok' ? 'success':'danger'">{{ row.item.status === 'ok' ? 'OK': 'FAIL'}}</b-badge>
+                    <b-badge :variant="row.item.status === 'ok' ? 'success':(row.item.status === 'unstable' ? 'warning':'danger')">{{ row.item.status === 'ok' ? 'OK': (row.item.status === 'unstable' ? 'unstable': 'FAIL')}}</b-badge>
                 </template>
                 <template slot="empty" slot-scope="scope">
                     {{ scope.emptyText }}
@@ -30,9 +30,12 @@
             </b-table>
             <b-modal :id="infoModal.id" size="xl" scrollable :title="infoModal.title" ok-only @hide="resetInfoModal">
                 <div role="tablist">
-                    <b-card no-body class="mb-1" v-for="(stage, index) in infoModal.content" :key="index">
+                    <b-card no-body class="mb-1" v-for="(stage, index) in infoModal.content" :key="index" v-if="stage.messages.length > 0">
                         <b-card-header header-tag="header" class="p-1" role="tab">
-                            <b-button block href="#" v-b-toggle="'accordion-' + index" variant="success">{{ stage.name }}</b-button>
+                            <b-button block href="#" v-b-toggle="'accordion-' + index" :variant="stage.messages.filter(item => item.level === 'ERROR').length > 0 ? 'warning': 'success'">
+                                {{ stage.name }}
+                                <span v-if="stage.max > 0"> ({{ stage.total }}/{{ stage.max }} {{ stage.percentage * 100 }}%)</span>
+                            </b-button>
                         </b-card-header>
                         <b-collapse :id="'accordion-' + index" visible accordion="my-accordion" role="tabpanel">
                             <b-card-body body-bg-variant="dark" body-text-variant="white">
