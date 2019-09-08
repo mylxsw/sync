@@ -20,6 +20,7 @@ type Stage struct {
 }
 
 type StageMessage struct {
+	Index     int       `json:"index"`
 	Timestamp time.Time `json:"timestamp"`
 	Level     string    `json:"level"`
 	Message   string    `json:"message"`
@@ -31,6 +32,13 @@ func (s *Stage) Progress(max int) *Progress {
 
 	s.progress = NewProgress(max)
 	s.Max = max
+	return s.progress
+}
+
+func (s *Stage) GetProgress() *Progress {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
 	return s.progress
 }
 
@@ -51,12 +59,14 @@ func (s *Stage) Info(message string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	log.Info(message)
-	s.Messages = append(s.Messages, StageMessage{
+	// log.Info(message)
+	msg := StageMessage{
+		Index:     s.col.Index(),
 		Timestamp: time.Now(),
 		Level:     "INFO",
 		Message:   message,
-	})
+	}
+	s.Messages = append(s.Messages, msg)
 }
 
 // Error 错误输出
@@ -65,9 +75,11 @@ func (s *Stage) Error(message string) {
 	defer s.lock.Unlock()
 
 	log.Error(message)
-	s.Messages = append(s.Messages, StageMessage{
+	msg := StageMessage{
+		Index:     s.col.Index(),
 		Timestamp: time.Now(),
 		Level:     "ERROR",
 		Message:   message,
-	})
+	}
+	s.Messages = append(s.Messages, msg)
 }

@@ -5,6 +5,8 @@ definitions:
       collectors:
         $ref: '#/definitions/collector.Collectors'
         type: object
+      index:
+        type: integer
       jobID:
         type: string
       lock:
@@ -55,6 +57,8 @@ definitions:
     type: object
   collector.StageMessage:
     properties:
+      index:
+        type: integer
       level:
         type: string
       message:
@@ -85,6 +89,8 @@ definitions:
       job:
         $ref: '#/definitions/job.FileSyncJob'
         type: object
+      job_id:
+        type: string
       name:
         type: string
       output:
@@ -349,16 +355,9 @@ paths:
       summary: 查询文件同步任务执行状态
       tags:
       - Jobs
-  /running-jobs/:
+  /running-jobs/{id}/:
     get:
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              type: string
-            type: array
-      summary: 运行中的任务
+      summary: 运行中的任务状态，基于websocket
       tags:
       - RunningJobs
   /sync-bulk/:

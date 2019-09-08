@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/mylxsw/asteria/log"
@@ -11,6 +12,7 @@ import (
 	"github.com/mylxsw/sync/queue/job"
 	"github.com/mylxsw/sync/rpc"
 	"github.com/mylxsw/sync/storage"
+	"github.com/mylxsw/sync/utils"
 )
 
 // SyncQueue 任务同步队列接口
@@ -19,6 +21,8 @@ type SyncQueue interface {
 	Enqueue(jobs ...job.FileSyncJob) error
 	// Worker 执行任务队列消费
 	Worker(ctx context.Context)
+	// RunningJobs 获取运行中的任务
+	RunningJobs() []storage.JobHistoryItem
 }
 
 type syncQueue struct {
@@ -26,17 +30,34 @@ type syncQueue struct {
 	failedStore storage.FailedJobStore
 	statusStore storage.JobStatusStore
 	cc          *container.Container
+
+	lock        sync.RWMutex
+	runningJobs map[string]*storage.JobHistoryItem
 }
 
 // NewSyncQueue 创建一个任务队列
 func NewSyncQueue(cc *container.Container, queue storage.QueueStore, failedStore storage.FailedJobStore) SyncQueue {
-	sq := syncQueue{queue: queue, failedStore: failedStore, cc: cc}
+	sq := syncQueue{queue: queue, failedStore: failedStore, cc: cc, runningJobs: make(map[string]*storage.JobHistoryItem)}
 
 	cc.MustResolve(func(statusStore storage.JobStatusStore) {
 		sq.statusStore = statusStore
 	})
 
 	return &sq
+}
+
+func (sq *syncQueue) AddRunningJob(id string, job *storage.JobHistoryItem) {
+	sq.lock.Lock()
+	defer sq.lock.Unlock()
+
+	sq.runningJobs[id] = job
+}
+
+func (sq *syncQueue) RemoveRunningJob(id string) {
+	sq.lock.Lock()
+	defer sq.lock.Unlock()
+
+	delete(sq.runningJobs, id)
 }
 
 func (sq *syncQueue) Enqueue(jobs ...job.FileSyncJob) error {
@@ -104,7 +125,7 @@ func (sq *syncQueue) syncJob() {
 		return
 	}
 
-	// 初始化 j
+	// 初始化 job
 	j := &job.FileSyncJob{}
 	j.Decode(data)
 
@@ -119,6 +140,16 @@ func (sq *syncQueue) syncJob() {
 			"status": storage.JobStatusRunning,
 		}).Errorf("update job status failed: %s", err)
 	}
+
+	jhi := storage.JobHistoryItem{
+		ID:        utils.UUID(),
+		JobID:     j.ID,
+		Name:      j.Name,
+		Payload:   data,
+		Status:    "running",
+		CreatedAt: time.Now(),
+	}
+	sq.AddRunningJob(j.ID, &jhi)
 
 	// 初始化任务执行历史纪录函数
 	// 在前面的 defer 中会自动执行该函数
@@ -137,11 +168,16 @@ func (sq *syncQueue) syncJob() {
 			status = "unstable"
 		}
 
-		if err := jobHistory.Record(j.Name, j.ID, data, status, col.Build()); err != nil {
+		jhi.Status = status
+		jhi.Output = col.Build()
+
+		if err := jobHistory.Record(jhi); err != nil {
 			log.WithFields(log.Fields{
 				"job": j,
 			}).Errorf("record job history failed: %s", err)
 		}
+
+		sq.RemoveRunningJob(j.ID)
 
 		// 更新任务状态
 		var jobStatus storage.JobStatus
@@ -177,4 +213,16 @@ func (sq *syncQueue) syncJob() {
 			}).Errorf("enqueue FileSyncJob to failed queue failed: %s", err)
 		}
 	}
+}
+
+func (sq *syncQueue) RunningJobs() []storage.JobHistoryItem {
+	sq.lock.RLock()
+	defer sq.lock.RUnlock()
+
+	items := make([]storage.JobHistoryItem, 0)
+	for _, j := range sq.runningJobs {
+		items = append(items, *j)
+	}
+
+	return items
 }

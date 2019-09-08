@@ -423,8 +423,6 @@ func (fs *fileSyncClient) syncFileOwner(dest string, f *protocol.File) error {
 
 // writeFile 创建新文件
 func (fs *fileSyncClient) writeFile(downloadResp protocol.SyncService_SyncFileClient, f *protocol.File, savedFilePath string) error {
-	log.Debugf("write file %s with mode=%s, size=%s ...", savedFilePath, os.FileMode(f.Mode), humanize.Bytes(uint64(f.Size)))
-
 	saveFile, err := os.OpenFile(savedFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(f.Mode))
 	if err != nil {
 		return err
@@ -451,6 +449,6 @@ func (fs *fileSyncClient) writeFile(downloadResp protocol.SyncService_SyncFileCl
 		total += cur
 	}
 
-	log.Infof("write file %s, size=%s OK", savedFilePath, humanize.Bytes(uint64(total)))
+	log.Debugf("write file %s, mode=%s, size=%s OK", savedFilePath, os.FileMode(f.Mode), humanize.Bytes(uint64(total)))
 	return nil
 }

@@ -52,17 +52,28 @@ func (cols *Collectors) Names() []string {
 
 // Collector 数据采集器，用于采集 Job 的输出
 type Collector struct {
+	Stages []*Stage `json:"stages"`
+
 	lock       sync.RWMutex
 	jobID      string
 	collectors *Collectors
-	Stages     []*Stage `json:"stages"`
+	index      int
+}
+
+type ConsoleMessage struct {
+	Stage        *Stage
+	StageMessage StageMessage
 }
 
 // NewCollector 创建一个新的数据采集器
 func NewCollector(collectors *Collectors, jobID string) *Collector {
 	log.Debug("new collector created, collecting...")
 
-	col := &Collector{Stages: make([]*Stage, 0), jobID: jobID, collectors: collectors}
+	col := &Collector{
+		Stages:     make([]*Stage, 0),
+		jobID:      jobID,
+		collectors: collectors,
+	}
 	collectors.Add(col)
 
 	return col
@@ -125,4 +136,12 @@ func (col *Collector) AllStages() []*Stage {
 	defer col.lock.RUnlock()
 
 	return col.Stages
+}
+
+func (col *Collector) Index() int {
+	col.lock.Lock()
+	defer col.lock.Unlock()
+
+	col.index++
+	return col.index
 }

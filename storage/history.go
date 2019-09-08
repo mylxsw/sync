@@ -5,13 +5,12 @@ import (
 	"time"
 
 	"github.com/mylxsw/coll"
-	"github.com/mylxsw/sync/utils"
 	"github.com/siddontang/ledisdb/ledis"
 )
 
 type JobHistoryStore interface {
 	// Record 记录 JOB 执行历史
-	Record(name string, jobID string, payload []byte, status string, output []byte) error
+	Record(item JobHistoryItem) error
 	// Recently 返回最近的 limit 条记录
 	Recently(limit int) ([]JobHistoryItem, error)
 	// Truncate 清空历史纪录
@@ -30,6 +29,7 @@ func NewJobHistoryStore(db *ledis.DB) JobHistoryStore {
 
 type JobHistoryItem struct {
 	ID        string    `json:"id"`
+	JobID     string    `json:"job_id"`
 	Name      string    `json:"name"`
 	Payload   []byte    `json:"payload"`
 	Output    []byte    `json:"output"`
@@ -37,15 +37,8 @@ type JobHistoryItem struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func (his *jobHistoryStore) Record(name string, jobID string, payload []byte, status string, output []byte) error {
-	data, _ := json.Marshal(JobHistoryItem{
-		ID:        utils.UUID(),
-		Name:      name,
-		Payload:   payload,
-		Status:    status,
-		Output:    output,
-		CreatedAt: time.Now(),
-	})
+func (his *jobHistoryStore) Record(item JobHistoryItem) error {
+	data, _ := json.Marshal(item)
 
 	if _, err := his.db.LPush([]byte("history"), data); err != nil {
 		return err

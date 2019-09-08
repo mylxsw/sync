@@ -247,23 +247,12 @@
                 }
             }
         },
-        "/running-jobs/": {
+        "/running-jobs/{id}/": {
             "get": {
                 "tags": [
                     "RunningJobs"
                 ],
-                "summary": "运行中的任务",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
+                "summary": "运行中的任务状态，基于websocket"
             }
         },
         "/sync-bulk/": {
@@ -424,6 +413,9 @@
                     "type": "object",
                     "$ref": "#/definitions/collector.Collectors"
                 },
+                "index": {
+                    "type": "integer"
+                },
                 "jobID": {
                     "type": "string"
                 },
@@ -500,6 +492,9 @@
         "collector.StageMessage": {
             "type": "object",
             "properties": {
+                "index": {
+                    "type": "integer"
+                },
                 "level": {
                     "type": "string"
                 },
@@ -545,6 +540,9 @@
                 "job": {
                     "type": "object",
                     "$ref": "#/definitions/job.FileSyncJob"
+                },
+                "job_id": {
+                    "type": "string"
                 },
                 "name": {
                     "type": "string"

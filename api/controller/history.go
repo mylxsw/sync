@@ -9,6 +9,7 @@ import (
 	"github.com/mylxsw/container"
 	"github.com/mylxsw/hades"
 	"github.com/mylxsw/sync/collector"
+	"github.com/mylxsw/sync/queue"
 	"github.com/mylxsw/sync/queue/job"
 	"github.com/mylxsw/sync/storage"
 )
@@ -30,6 +31,7 @@ func (h *HistoryController) Register(router *hades.Router) {
 
 type History struct {
 	ID        string              `json:"id"`
+	JobID     string              `json:"job_id"`
 	Name      string              `json:"name"`
 	Status    string              `json:"status"`
 	CreatedAt time.Time           `json:"created_at"`
@@ -43,7 +45,7 @@ type History struct {
 // @Param limit query int false "返回记录数目"
 // @Success 200 {array} controller.History
 // @Router /histories/ [get]
-func (h *HistoryController) Recently(ctx *hades.WebContext, req *hades.HttpRequest, historyStore storage.JobHistoryStore) hades.HTTPResponse {
+func (h *HistoryController) Recently(ctx *hades.WebContext, req *hades.HttpRequest, syncQueue queue.SyncQueue, historyStore storage.JobHistoryStore) hades.HTTPResponse {
 	limit := req.IntInput("limit", 10)
 	if limit <= 0 || limit > 100 {
 		return ctx.JSONError("invalid limit argument", http.StatusUnprocessableEntity)
@@ -54,12 +56,16 @@ func (h *HistoryController) Recently(ctx *hades.WebContext, req *hades.HttpReque
 		return ctx.JSONError(err.Error(), http.StatusInternalServerError)
 	}
 
+	runningJobs := syncQueue.RunningJobs()
+	items = append(runningJobs, items...)
+
 	return ctx.JSON(coll.MustNew(items).Map(func(item storage.JobHistoryItem) History {
 		j := job.FileSyncJob{}
 		j.Decode(item.Payload)
 
 		return History{
 			ID:        item.ID,
+			JobID:     item.JobID,
 			Name:      item.Name,
 			Status:    item.Status,
 			CreatedAt: item.CreatedAt,
@@ -95,6 +101,7 @@ func (h *HistoryController) Item(ctx *hades.WebContext, req *hades.HttpRequest, 
 
 			return ctx.JSON(History{
 				ID:        item.ID,
+				JobID:     item.JobID,
 				Name:      item.Name,
 				Status:    item.Status,
 				CreatedAt: item.CreatedAt,

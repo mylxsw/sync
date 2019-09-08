@@ -3,7 +3,9 @@ package controller
 import (
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/coll"
 	"github.com/mylxsw/container"
@@ -41,7 +43,7 @@ func (j *JobController) Register(router *hades.Router) {
 	})
 
 	router.Group("/running-jobs", func(router *hades.Router) {
-		router.Get("/", j.RunningJobs)
+		router.Any("/{id}/", j.RunningJob)
 	})
 }
 
@@ -287,26 +289,133 @@ func (s *JobController) RetryJob(ctx *hades.WebContext, req *hades.HttpRequest, 
 	return ctx.JSON(j)
 }
 
-// RunningJobs 运行中的任务
-// @Summary 运行中的任务
+// RunningJob 运行中的任务状态， websocket
+// @Summary 运行中的任务状态，基于websocket
 // @Tags RunningJobs
-// @Success 200 {array} string
-// @Router /running-jobs/ [get]
-func (s *JobController) RunningJobs(ctx *hades.WebContext, collectors *collector.Collectors) hades.HTTPResponse {
-	return ctx.JSON(collectors.Names())
-}
-
-func (s *JobController) RunningJob(ctx *hades.WebContext, collectors *collector.Collectors) hades.HTTPResponse {
+// @Router /running-jobs/{id}/ [get]
+func (s *JobController) RunningJob(ctx *hades.WebContext, ws *hades.WebSocket, collectors *collector.Collectors, statusStore storage.JobStatusStore) hades.HTTPResponse {
 	jobId := ctx.PathVar("id")
 	if jobId == "" {
 		return ctx.JSONError("invalid job id", http.StatusUnprocessableEntity)
 	}
 
-	col := collectors.Get(jobId)
-	if col == nil {
-		return ctx.JSONError("not found", http.StatusNotFound)
+	if ws.Error != nil {
+		return ctx.JSONError(ws.Error.Error(), http.StatusInternalServerError)
 	}
 
-	// stages := col.AllStages()
-	return ctx.JSON(hades.M{})
+	jobStatus := statusStore.Status(jobId)
+	switch jobStatus {
+	case storage.JobStatusOK, storage.JobStatusFailed, storage.JobStatusUnstable:
+		evt := NewEvent("progress", JobProgress{
+			Name:       "",
+			Status:     string(jobStatus),
+			Percentage: 1,
+		})
+
+		_ = ws.WS.SetWriteDeadline(time.Now().Add(10 * time.Second))
+		if err := ws.WS.WriteMessage(websocket.TextMessage, evt.Encode()); err != nil {
+			log.Errorf("write - send progress: %s", err)
+		}
+
+		_ = ws.WS.Close()
+
+		return ctx.Nil()
+	default:
+	}
+
+	col := collectors.Get(jobId)
+	if col == nil {
+		return ctx.JSONError("no such collector", http.StatusNotFound)
+	}
+
+	go func() {
+		pingTicker := time.NewTicker(10 * time.Second)
+		progressTicker := time.NewTicker(500 * time.Millisecond)
+		defer func() {
+			pingTicker.Stop()
+			progressTicker.Stop()
+			_ = ws.WS.Close()
+		}()
+
+		var progresses = make(map[string]*collector.Progress)
+
+		for {
+			select {
+			case <-progressTicker.C:
+				for _, s := range col.Stages {
+					prog := s.GetProgress()
+					if prog != nil {
+						progresses[s.Name] = prog
+					}
+				}
+
+				for name, prog := range progresses {
+					status := string(storage.JobStatusRunning)
+					percentage := prog.Percentage()
+					if percentage >= 1 {
+						status = string(storage.JobStatusOK)
+					}
+
+					evt := NewEvent("progress", JobProgress{
+						Name:       name,
+						Status:     status,
+						Percentage: percentage,
+						Total:      prog.Total(),
+						Max:        prog.Max(),
+					})
+
+					_ = ws.WS.SetWriteDeadline(time.Now().Add(10 * time.Second))
+					if err := ws.WS.WriteMessage(websocket.TextMessage, evt.Encode()); err != nil {
+						log.Errorf("write - send progress: %s", err)
+						return
+					}
+				}
+
+			// case msg := <-col.Console:
+			// 	if msg.Stage != nil && msg.Stage.GetProgress() != nil {
+			// 		lastProgress = msg.Stage.GetProgress()
+			// 	}
+			//
+			// 	evt := NewEvent("console", JobRunningStatus{
+			// 		Console: msg.StageMessage,
+			// 	})
+			//
+			// 	_ = ws.WS.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			// 	if err := ws.WS.WriteMessage(websocket.TextMessage, evt.Encode()); err != nil {
+			// 		log.Errorf("write - send console: %s", err)
+			// 		return
+			// 	}
+			case <-pingTicker.C:
+				_ = ws.WS.SetWriteDeadline(time.Now().Add(10 * time.Second))
+				if err := ws.WS.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+					log.Errorf("ping: %s", err)
+					return
+				}
+			}
+		}
+	}()
+
+	(func() {
+		defer func() {
+			if err := ws.WS.Close(); err != nil {
+				log.Errorf("read - close websocket: %s", err)
+			}
+		}()
+		ws.WS.SetReadLimit(512)
+		_ = ws.WS.SetReadDeadline(time.Now().Add(60 * time.Second))
+		ws.WS.SetPongHandler(func(string) error {
+			_ = ws.WS.SetReadDeadline(time.Now().Add(60 * time.Second));
+			return nil
+		})
+		for {
+			_, rs, err := ws.WS.ReadMessage()
+			log.Debugf("read - message: %s", rs)
+			if err != nil {
+				log.Errorf("read - read message: %s", err)
+				break
+			}
+		}
+	})()
+
+	return ctx.Nil()
 }

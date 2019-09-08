@@ -21,6 +21,7 @@ export default new Vuex.Store({
     getters: {
         serverUrl: (state) => state.serverUrl,
         token: (state) => state.token,
+        websocketUrl: (state) => state.serverUrl.replace('http://', 'ws://')
     },
     actions: {}
 })
