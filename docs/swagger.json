@@ -581,6 +581,9 @@
         "job.FileSyncJob": {
             "type": "object",
             "properties": {
+                "cc": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -593,6 +596,10 @@
                 "payload": {
                     "type": "object",
                     "$ref": "#/definitions/meta.FileSyncGroup"
+                },
+                "syncSetting": {
+                    "type": "object",
+                    "$ref": "#/definitions/meta.GlobalFileSyncSetting"
                 }
             }
         },
@@ -640,6 +647,12 @@
                         "$ref": "#/definitions/meta.SyncAction"
                     }
                 },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/meta.SyncAction"
+                    }
+                },
                 "files": {
                     "type": "array",
                     "items": {
@@ -657,6 +670,35 @@
                     "items": {
                         "$ref": "#/definitions/meta.Rule"
                     }
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "meta.GlobalFileSyncSetting": {
+            "type": "object",
+            "properties": {
+                "after": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/meta.SyncAction"
+                    }
+                },
+                "before": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/meta.SyncAction"
+                    }
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/meta.SyncAction"
+                    }
+                },
+                "from": {
+                    "type": "string"
                 },
                 "token": {
                     "type": "string"
@@ -689,13 +731,18 @@
                 "action": {
                     "type": "string"
                 },
+                "body": {
+                    "description": "--- dingding ---",
+                    "type": "string"
+                },
                 "command": {
+                    "description": "--- command ---",
                     "type": "string"
                 },
-                "match": {
-                    "type": "string"
+                "parse_template": {
+                    "type": "boolean"
                 },
-                "replace": {
+                "token": {
                     "type": "string"
                 },
                 "when": {

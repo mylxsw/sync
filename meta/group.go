@@ -12,6 +12,7 @@ import (
 	"github.com/mylxsw/go-toolkit/executor"
 	"github.com/mylxsw/sync/collector"
 	"github.com/mylxsw/sync/protocol"
+	"github.com/mylxsw/sync/utils/ding"
 	"github.com/pkg/errors"
 )
 
@@ -55,6 +56,32 @@ func (fsg *FileSyncGroup) Decode(data []byte) error {
 	return json.Unmarshal(data, &fsg)
 }
 
+// GlobalFileSyncSetting global file sync settings
+type GlobalFileSyncSetting struct {
+	From   string       `json:"from,omitempty" yaml:"from,omitempty"`
+	Token  string       `json:"token,omitempty" yaml:"token,omitempty"`
+	Before []SyncAction `json:"before,omitempty" yaml:"before,omitempty"`
+	After  []SyncAction `json:"after,omitempty" yaml:"after,omitempty"`
+	Errors []SyncAction `json:"errors,omitempty" yaml:"errors,omitempty"`
+}
+
+func NewGlobalFileSyncSetting() *GlobalFileSyncSetting {
+	return &GlobalFileSyncSetting{
+		Before: make([]SyncAction, 0),
+		After:  make([]SyncAction, 0),
+		Errors: make([]SyncAction, 0),
+	}
+}
+
+func (gfs *GlobalFileSyncSetting) Encode() []byte {
+	rs, _ := json.Marshal(gfs)
+	return rs
+}
+
+func (gfs *GlobalFileSyncSetting) Decode(data []byte) error {
+	return json.Unmarshal(data, &gfs)
+}
+
 // SyncUnit 一个同步组中的一个文件同步
 type SyncUnit struct {
 	Files      []*protocol.File
@@ -63,21 +90,29 @@ type SyncUnit struct {
 
 // SyncAction 文件同步前置后置任务
 type SyncAction struct {
-	Action        string `json:"action,omitempty" yaml:"action,omitempty"`
-	Match         string `json:"match,omitempty" yaml:"match,omitempty"`
-	Replace       string `json:"replace,omitempty" yaml:"replace,omitempty"`
+	Action string `json:"action,omitempty" yaml:"action,omitempty"`
+	When   string `json:"when,omitempty" yaml:"when,omitempty"`
+
+	// Match         string `json:"match,omitempty" yaml:"match,omitempty"`
+	// Replace       string `json:"replace,omitempty" yaml:"replace,omitempty"`
+
+	// --- command ---
 	Command       string `json:"command,omitempty" yaml:"command,omitempty"`
-	When          string `json:"when,omitempty" yaml:"when,omitempty"`
 	ParseTemplate bool   `json:"parse_template,omitempty" yaml:"parse_template,omitempty"`
+
+	// --- dingding ---
+	Body  string `json:"body,omitempty" yaml:"body,omitempty"`
+	Token string `json:"token,omitempty" yaml:"token,omitempty"`
 }
 
 type SyncMatchData struct {
-	Units []SyncUnit
-	Err   error
+	FileSyncGroup FileSyncGroup
+	Units         []SyncUnit
+	Err           error
 }
 
-func NewSyncMatchData(units []SyncUnit, err error) *SyncMatchData {
-	return &SyncMatchData{Units: units, Err: err}
+func NewSyncMatchData(grp FileSyncGroup, units []SyncUnit, err error) *SyncMatchData {
+	return &SyncMatchData{FileSyncGroup: grp, Units: units, Err: err}
 }
 
 // Matched return if the action should be executed base on `When` option
@@ -141,42 +176,77 @@ func (syncAction SyncAction) workDir(units []SyncUnit) string {
 }
 
 func (syncAction SyncAction) Execute(data *SyncMatchData, stage *collector.Stage) error {
+	defer func() {
+		if err := recover(); err != nil {
+			stage.Error(fmt.Sprintf("%s has a panic: %s", syncAction.Action, err))
+		}
+	}()
+
 	switch syncAction.Action {
 	case "command":
-		commandStr := syncAction.Command
-		if syncAction.ParseTemplate {
-			cs, err := ParseTemplate(syncAction.Command, data)
-			if err != nil {
-				stage.Error(fmt.Sprintf("parse command [%s] as template failed: %s", syncAction.Command, err))
-			} else {
-				commandStr = cs
-			}
-		}
-
-		cmd := executor.New("sh", "-c", commandStr)
-		cmd.Init(func(cmd *exec.Cmd) error {
-			workDir := syncAction.workDir(data.Units)
-			if workDir != "" {
-				cmd.Dir = workDir
-			}
-
-			return nil
-		})
-		if ok, err := cmd.Run(); !ok || err != nil {
-			msg := cmd.StderrString()
-			if msg != "" {
-				stage.Error(fmt.Sprintf("[%s] %s", syncAction.Command, msg))
-			}
-
-			return errors.Wrap(err, fmt.Sprintf("command [%s] execute failed", syncAction.Command))
-		}
-
-		stage.Info(fmt.Sprintf("[%s] %s", syncAction.Command, cmd.StdoutString()))
-	case "replace":
-
+		return syncAction.commandHandler(data, stage)
+	case "dingding":
+		return syncAction.dingdingHandler(data, stage)
 	default:
 		stage.Error(fmt.Sprintf("[%s] %s", syncAction.Command, "not support"))
 	}
 
+	return nil
+}
+
+func (syncAction SyncAction) dingdingHandler(data *SyncMatchData, stage *collector.Stage) error {
+	markdownBody := syncAction.Body
+	body, err := ParseTemplate(syncAction.Body, data)
+	if err != nil {
+		stage.Error(fmt.Sprintf("parse dingding template [%s] failed: %s", syncAction.Body, err))
+	} else {
+		markdownBody = body
+	}
+
+	msg := ding.NewMarkdownMessage(
+		fmt.Sprintf("Sync %s notification", data.FileSyncGroup.Name),
+		markdownBody,
+		[]string{},
+	)
+
+	dingClient := ding.NewDingding(syncAction.Token)
+	if err := dingClient.Send(msg); err != nil {
+		stage.Error(fmt.Sprintf("dingding send message failed: %s", err))
+		return errors.Wrapf(err, "dingding send message failed")
+	} else {
+		stage.Info("dingding send message success")
+	}
+
+	return nil
+}
+
+func (syncAction SyncAction) commandHandler(data *SyncMatchData, stage *collector.Stage) error {
+	commandStr := syncAction.Command
+	if syncAction.ParseTemplate {
+		cs, err := ParseTemplate(syncAction.Command, data)
+		if err != nil {
+			stage.Error(fmt.Sprintf("command [%s] parsed as template failed: %s", syncAction.Command, err))
+		} else {
+			commandStr = cs
+		}
+	}
+	cmd := executor.New("sh", "-c", commandStr)
+	cmd.Init(func(cmd *exec.Cmd) error {
+		workDir := syncAction.workDir(data.Units)
+		if workDir != "" {
+			cmd.Dir = workDir
+		}
+
+		return nil
+	})
+	if ok, err := cmd.Run(); !ok || err != nil {
+		msg := cmd.StderrString()
+		if msg != "" {
+			stage.Error(fmt.Sprintf("command [%s] %s", syncAction.Command, msg))
+		}
+
+		return errors.Wrap(err, fmt.Sprintf("command [%s] execute failed", syncAction.Command))
+	}
+	stage.Info(fmt.Sprintf("[%s] %s", syncAction.Command, cmd.StdoutString()))
 	return nil
 }

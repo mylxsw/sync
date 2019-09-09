@@ -129,6 +129,9 @@ func (sq *syncQueue) syncJob() {
 	j := &job.FileSyncJob{}
 	j.Decode(data)
 
+	// initialize Job, set container
+	sq.cc.MustResolve(j.Init)
+
 	log.WithFields(log.Fields{
 		"job": j,
 	}).Debugf("processing job %s [%s]", j.Name, j.ID)

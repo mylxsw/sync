@@ -8,11 +8,13 @@ import (
 	"time"
 
 	"github.com/mylxsw/asteria/log"
+	"github.com/mylxsw/container"
 	"github.com/mylxsw/sync/client"
 	"github.com/mylxsw/sync/collector"
 	"github.com/mylxsw/sync/meta"
 	"github.com/mylxsw/sync/protocol"
 	"github.com/mylxsw/sync/rpc"
+	"github.com/mylxsw/sync/storage"
 	"github.com/mylxsw/sync/utils"
 	"github.com/pkg/errors"
 )
@@ -23,6 +25,9 @@ type FileSyncJob struct {
 	Name      string             `json:"name"`
 	Payload   meta.FileSyncGroup `json:"payload"`
 	CreatedAt time.Time          `json:"created_at"`
+
+	cc          *container.Container
+	syncSetting *meta.GlobalFileSyncSetting
 }
 
 // NewFileSyncJob 创建一个文件同步job
@@ -33,6 +38,55 @@ func NewFileSyncJob(group meta.FileSyncGroup) *FileSyncJob {
 		Payload:   group,
 		CreatedAt: time.Now(),
 	}
+}
+
+func (job *FileSyncJob) Init(settingFactory storage.SettingFactory) {
+	syncSettingData, err := settingFactory.Namespace(storage.GlobalNamespace).Get(storage.SyncActionSetting)
+	if err != nil {
+		if err != storage.ErrNoSuchSetting {
+			log.Errorf("load global sync setting failed: %s", err)
+		}
+
+		job.syncSetting = meta.NewGlobalFileSyncSetting()
+		return
+	}
+
+	setting := meta.GlobalFileSyncSetting{}
+	if err := setting.Decode(syncSettingData); err != nil {
+		log.Errorf("decode global sync setting failed: %s", err)
+		job.syncSetting = meta.NewGlobalFileSyncSetting()
+		return
+	}
+
+	job.syncSetting = &setting
+}
+
+func (job *FileSyncJob) BeforeActions() []meta.SyncAction {
+	return append(job.Payload.Before, job.syncSetting.Before...)
+}
+
+func (job *FileSyncJob) AfterActions() []meta.SyncAction {
+	return append(job.Payload.After, job.syncSetting.After...)
+}
+
+func (job *FileSyncJob) ErrorActions() []meta.SyncAction {
+	return append(job.Payload.Errors, job.syncSetting.Errors...)
+}
+
+func (job *FileSyncJob) RemoteServer() string {
+	if job.Payload.From != "" {
+		return job.Payload.From
+	}
+
+	return job.syncSetting.From
+}
+
+func (job *FileSyncJob) RemoteServerToken() string {
+	if job.Payload.Token != "" {
+		return job.Payload.Token
+	}
+
+	return job.syncSetting.Token
 }
 
 func (job *FileSyncJob) Encode() []byte {
@@ -46,10 +100,11 @@ func (job *FileSyncJob) Decode(res []byte) {
 
 func (job *FileSyncJob) Handle(ctx context.Context, rpcFactory rpc.Factory, col *collector.Collector) error {
 	if err := job.handle(ctx, rpcFactory, col); err != nil {
-		if len(job.Payload.Errors) > 0 {
+		errActions := job.ErrorActions()
+		if len(errActions) > 0 {
 			stage := col.Stage("errors")
-			matchData := meta.NewSyncMatchData([]meta.SyncUnit{}, err)
-			for _, act := range job.Payload.Errors {
+			matchData := meta.NewSyncMatchData(job.Payload, []meta.SyncUnit{}, err)
+			for _, act := range errActions {
 				if act.Matched(matchData) {
 					if err := act.Execute(matchData, stage); err != nil {
 						log.WithFields(log.Fields{
@@ -67,7 +122,7 @@ func (job *FileSyncJob) Handle(ctx context.Context, rpcFactory rpc.Factory, col 
 }
 
 func (job *FileSyncJob) handle(ctx context.Context, rpcFactory rpc.Factory, col *collector.Collector) error {
-	syncClient, err := rpcFactory.SyncClient(job.Payload.From, job.Payload.Token)
+	syncClient, err := rpcFactory.SyncClient(job.RemoteServer(), job.RemoteServerToken())
 	if err != nil {
 		return errors.Wrap(err, "create sync rpc client failed")
 	}
@@ -102,8 +157,8 @@ func (job *FileSyncJob) fileSync(units []meta.SyncUnit, col *collector.Collector
 		// 文件同步前置任务
 		stageSyncBefore := col.Stage(fmt.Sprintf("sync-before-#%d", i))
 		for j, before := range g.FileToSync.Before {
-			if before.Matched(meta.NewSyncMatchData([]meta.SyncUnit{g}, nil)) {
-				if err := before.Execute(meta.NewSyncMatchData([]meta.SyncUnit{g}, nil), stageSyncBefore); err != nil {
+			if before.Matched(meta.NewSyncMatchData(job.Payload, []meta.SyncUnit{g}, nil)) {
+				if err := before.Execute(meta.NewSyncMatchData(job.Payload, []meta.SyncUnit{g}, nil), stageSyncBefore); err != nil {
 					stageSyncBefore.Error(fmt.Sprintf("#%d matched, but execute failed: %s", j, err))
 					return errors.Wrap(err, "execute before stage failed")
 				}
@@ -122,8 +177,8 @@ func (job *FileSyncJob) fileSync(units []meta.SyncUnit, col *collector.Collector
 		// 文件同步后置任务
 		stageSyncAfter := col.Stage(fmt.Sprintf("sync-after-#%d", i))
 		for j, after := range g.FileToSync.After {
-			if after.Matched(meta.NewSyncMatchData([]meta.SyncUnit{g}, nil)) {
-				if err := after.Execute(meta.NewSyncMatchData([]meta.SyncUnit{g}, nil), stageSyncAfter); err != nil {
+			if after.Matched(meta.NewSyncMatchData(job.Payload, []meta.SyncUnit{g}, nil)) {
+				if err := after.Execute(meta.NewSyncMatchData(job.Payload, []meta.SyncUnit{g}, nil), stageSyncAfter); err != nil {
 					stageSyncAfter.Error(fmt.Sprintf("#%d matched, but execute failed: %s", j, err))
 					return errors.Wrap(err, "execute after stage failed")
 				}
@@ -139,9 +194,9 @@ func (job *FileSyncJob) fileSync(units []meta.SyncUnit, col *collector.Collector
 // groupAfter 同步后分组后置任务
 func (job *FileSyncJob) groupAfter(col *collector.Collector, units []meta.SyncUnit) error {
 	stageGroupAfter := col.Stage("group-after")
-	for i, after := range job.Payload.After {
-		if after.Matched(meta.NewSyncMatchData(units, nil)) {
-			if err := after.Execute(meta.NewSyncMatchData(units, nil), stageGroupAfter); err != nil {
+	for i, after := range job.AfterActions() {
+		if after.Matched(meta.NewSyncMatchData(job.Payload, units, nil)) {
+			if err := after.Execute(meta.NewSyncMatchData(job.Payload, units, nil), stageGroupAfter); err != nil {
 				stageGroupAfter.Error(fmt.Sprintf("#%d matched, but execute failed: %s", i, err))
 				return errors.Wrap(err, "execute Payload before stage failed")
 			}
@@ -156,9 +211,9 @@ func (job *FileSyncJob) groupAfter(col *collector.Collector, units []meta.SyncUn
 // groupBefore 同步前分组前置任务
 func (job *FileSyncJob) groupBefore(col *collector.Collector, units []meta.SyncUnit) error {
 	stageGroupBefore := col.Stage("group-before")
-	for i, before := range job.Payload.Before {
-		if before.Matched(meta.NewSyncMatchData(units, nil)) {
-			if err := before.Execute(meta.NewSyncMatchData(units, nil), stageGroupBefore); err != nil {
+	for i, before := range job.BeforeActions() {
+		if before.Matched(meta.NewSyncMatchData(job.Payload, units, nil)) {
+			if err := before.Execute(meta.NewSyncMatchData(job.Payload, units, nil), stageGroupBefore); err != nil {
 				stageGroupBefore.Error(fmt.Sprintf("#%d matched, but execute failed: %s", i, err))
 				return errors.Wrap(err, "execute Payload before stage failed")
 			}

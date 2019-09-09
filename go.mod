@@ -5,6 +5,7 @@ go 1.12
 require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/antonmedv/expr v0.0.0-20190722083458-9449c89f5e27
+	github.com/buger/jsonparser v0.0.0-20181115193947-bf1c66bbce23
 	github.com/codingsince1985/checksum v1.0.0
 	github.com/cupcake/rdb v0.0.0-20161107195141-43ba34106c76 // indirect
 	github.com/dustin/go-humanize v1.0.0

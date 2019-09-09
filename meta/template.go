@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"text/template"
@@ -13,6 +14,7 @@ import (
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/coll"
 	"github.com/mylxsw/go-toolkit/jsonutils"
+	"github.com/mylxsw/go-toolkit/network"
 )
 
 // ParseTemplate 模板解析
@@ -35,6 +37,7 @@ func ParseTemplate(templateContent string, data interface{}) (string, error) {
 		"trim_space":     strings.TrimSpace,
 		"format":         fmt.Sprintf,
 		"integer":        toInteger,
+		"sysinfo":        sysinfo,
 	}
 	var buffer bytes.Buffer
 	if err := template.Must(template.New("").Funcs(funcMap).Parse(templateContent)).Execute(&buffer, data); err != nil {
@@ -42,6 +45,20 @@ func ParseTemplate(templateContent string, data interface{}) (string, error) {
 	}
 
 	return buffer.String(), nil
+}
+
+// sysinfo 获取系统信息
+func sysinfo(name string) string {
+	switch name {
+	case "hostname":
+		host, _ := os.Hostname()
+		return host
+	case "ip":
+		ips, _ := network.GetLanIPs()
+		return strings.Join(ips, "|")
+	default:
+		return "-"
+	}
 }
 
 // cutOff 字符串截断

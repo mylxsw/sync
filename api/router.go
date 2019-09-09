@@ -35,6 +35,7 @@ func routers(cc *container.Container) func(router *hades.Router, mw hades.Reques
 			controller.NewFileSyncController(cc).Register(router)
 			controller.NewHistoryController(cc).Register(router)
 			controller.NewJobController(cc).Register(router)
+			controller.NewSettingController(cc).Register(router)
 		}, mws...)
 	}
 }

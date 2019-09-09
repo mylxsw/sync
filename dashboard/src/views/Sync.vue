@@ -47,10 +47,13 @@
 
             <b-button-toolbar class="mt-2">
                 <b-button variant="dark" @click="$refs.selectableTable.selectAllRows()">Select All</b-button>
-                <b-button class="ml-2" @click="$refs.selectableTable.clearSelected()" v-if="selected.length > 0">Reset</b-button>
+                <b-button class="ml-2" @click="$refs.selectableTable.clearSelected()" v-if="selected.length > 0">Reset
+                </b-button>
 
-                <b-button variant="primary" class="ml-2" @click="trigger_jobs()" v-if="selected.length > 0">Execute</b-button>
-                <b-button variant="danger" class="ml-2" @click="delete_syncs()" v-if="selected.length > 0">Delete</b-button>
+                <b-button variant="primary" class="ml-2" @click="trigger_jobs()" v-if="selected.length > 0">Execute
+                </b-button>
+                <b-button variant="danger" class="ml-2" @click="delete_syncs()" v-if="selected.length > 0">Delete
+                </b-button>
             </b-button-toolbar>
 
             <b-modal :id="infoModal.id" :title="infoModal.title" ok-only @hide="resetInfoModal" size="xl">
@@ -108,15 +111,23 @@
                 this.newSyncModel.content = '- name: sync-logs\n' +
                     '  from: 127.0.0.1:8818\n' +
                     '  files:\n' +
-                    '  - src: /data/logs\n' +
-                    '    dest: /tmp\n' +
+                    '  - src: /var/log\n' +
+                    '    dest: /tmp/logs\n' +
                     '    ignores:\n' +
                     '    - .git/\n' +
                     '    - .DS_Store\n' +
                     '  rules: []\n' +
+                    '  before:\n' +
+                    '  - action: command\n' +
+                    '    command: pwd\n' +
                     '  after:\n' +
                     '  - action: command\n' +
-                    '    command: curl -i https://www.baidu.com';
+                    '    command: curl -i https://www.baidu.com\n' +
+                    '  errors:\n' +
+                    '  - action: dingding\n' +
+                    '    body: "## Server {{ sysinfo \\"hostname\\" }} : {{ .FileSyncGroup.Name }} Has errors\\n\\n**IP:**\n' +
+                    '      {{ sysinfo \\"ip\\" }}\\n\\n**ERR:** \\n\\n    {{ .Err }}\\n"\n' +
+                    '    token: YOUR_DINGDING_GROUP_TOKEN\n';
             },
             /**
              * create a new sync definition
@@ -157,19 +168,18 @@
              * bulk trigger jobs
              */
             trigger_jobs() {
-                if (!confirm('Are you sure to execute all this definitions as jobs ?')) {
-                    return;
-                }
-
-                axios.post("/api/jobs-bulk/", {defs: this.selected.map(item => item.name)}).then(() => {
-                    this.$bvToast.toast('Successful', {
-                        title: 'OK',
-                        variant: 'success',
-                    })
-                }).catch(error => {
-                    this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
-                        title: 'ERROR',
-                        variant: 'danger'
+                this.$bvModal.msgBoxConfirm('Are you sure to execute all this definitions as jobs ?').then((value) => {
+                    if (value !== true) {return;}
+                    axios.post("/api/jobs-bulk/", {defs: this.selected.map(item => item.name)}).then(() => {
+                        this.$bvToast.toast('Successful', {
+                            title: 'OK',
+                            variant: 'success',
+                        })
+                    }).catch(error => {
+                        this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
+                            title: 'ERROR',
+                            variant: 'danger'
+                        });
                     });
                 });
             },
@@ -179,65 +189,62 @@
              * @param name
              */
             trigger_job(name) {
-                if (!confirm('Are you sure to execute this definition as a job ?')) {
-                    return;
-                }
-
-                axios.post("/api/jobs/", {def: name}).then(response => {
-                    this.$bvToast.toast('Successful，Job ID = ' + response.data.id, {
-                        title: 'OK',
-                        variant: 'success',
-                    })
-                }).catch(error => {
-                    this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
-                        title: 'ERROR',
-                        variant: 'danger'
+                this.$bvModal.msgBoxConfirm('Are you sure to execute this definition as a job ?').then((value) => {
+                    if (value !== true) {return;}
+                    axios.post("/api/jobs/", {def: name}).then(response => {
+                        this.$bvToast.toast('Successful，Job ID = ' + response.data.id, {
+                            title: 'OK',
+                            variant: 'success',
+                        })
+                    }).catch(error => {
+                        this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
+                            title: 'ERROR',
+                            variant: 'danger'
+                        });
                     });
-                });
+                })
             },
             /**
              * Bulk delete sync definitions
              */
             delete_syncs() {
-                if (!confirm('Are you sure to delete all this definitions ?')) {
-                    return;
-                }
-
-                axios.delete("/api/sync-bulk/", {data: {names: this.selected.map(item => item.name)}}).then(() => {
-                    this.$bvToast.toast('Successful', {
-                        title: 'OK',
-                        variant: 'success',
+                this.$bvModal.msgBoxConfirm('Are you sure to delete all this definitions ?').then((value) => {
+                    if (value !== true) {return;}
+                    axios.delete("/api/sync-bulk/", {data: {names: this.selected.map(item => item.name)}}).then(() => {
+                        this.$bvToast.toast('Successful', {
+                            title: 'OK',
+                            variant: 'success',
+                        });
+                        this.isBusy = true;
+                        this.refreshPage();
+                    }).catch(error => {
+                        this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
+                            title: 'ERROR',
+                            variant: 'danger'
+                        });
                     });
-                    this.isBusy = true;
-                    this.refreshPage();
-                }).catch(error => {
-                    this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
-                        title: 'ERROR',
-                        variant: 'danger'
-                    });
-                });
+                })
             },
             /**
              * Delete a sync definition
              */
             delete_sync(name) {
-                if (!confirm('Are you sure to delete this definition ?')) {
-                    return;
-                }
-
-                axios.delete("/api/sync/" + name + "/").then(() => {
-                    this.$bvToast.toast('Successful', {
-                        title: 'OK',
-                        variant: 'success',
+                this.$bvModal.msgBoxConfirm('Are you sure to delete this definition ?').then((value) => {
+                    if (value !== true) {return;}
+                    axios.delete("/api/sync/" + name + "/").then(() => {
+                        this.$bvToast.toast('Successful', {
+                            title: 'OK',
+                            variant: 'success',
+                        });
+                        this.isBusy = true;
+                        this.refreshPage();
+                    }).catch(error => {
+                        this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
+                            title: 'ERROR',
+                            variant: 'danger'
+                        });
                     });
-                    this.isBusy = true;
-                    this.refreshPage();
-                }).catch(error => {
-                    this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
-                        title: 'ERROR',
-                        variant: 'danger'
-                    });
-                });
+                })
             },
             /**
              * batch edit sync definitions

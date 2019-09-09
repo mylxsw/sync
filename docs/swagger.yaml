@@ -115,6 +115,8 @@ definitions:
     type: object
   job.FileSyncJob:
     properties:
+      cc:
+        type: string
       created_at:
         type: string
       id:
@@ -123,6 +125,9 @@ definitions:
         type: string
       payload:
         $ref: '#/definitions/meta.FileSyncGroup'
+        type: object
+      syncSetting:
+        $ref: '#/definitions/meta.GlobalFileSyncSetting'
         type: object
     type: object
   meta.File:
@@ -154,6 +159,10 @@ definitions:
         items:
           $ref: '#/definitions/meta.SyncAction'
         type: array
+      errors:
+        items:
+          $ref: '#/definitions/meta.SyncAction'
+        type: array
       files:
         items:
           $ref: '#/definitions/meta.File'
@@ -166,6 +175,25 @@ definitions:
         items:
           $ref: '#/definitions/meta.Rule'
         type: array
+      token:
+        type: string
+    type: object
+  meta.GlobalFileSyncSetting:
+    properties:
+      after:
+        items:
+          $ref: '#/definitions/meta.SyncAction'
+        type: array
+      before:
+        items:
+          $ref: '#/definitions/meta.SyncAction'
+        type: array
+      errors:
+        items:
+          $ref: '#/definitions/meta.SyncAction'
+        type: array
+      from:
+        type: string
       token:
         type: string
     type: object
@@ -186,11 +214,15 @@ definitions:
     properties:
       action:
         type: string
+      body:
+        description: '--- dingding ---'
+        type: string
       command:
+        description: '--- command ---'
         type: string
-      match:
-        type: string
-      replace:
+      parse_template:
+        type: boolean
+      token:
         type: string
       when:
         type: string

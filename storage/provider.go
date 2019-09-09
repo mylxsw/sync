@@ -30,6 +30,7 @@ func (s *ServiceProvider) Register(app *container.Container) {
 	})
 
 	app.MustSingleton(NewQueueStoreFactory)
+	app.MustSingleton(NewSettingFactory)
 
 	app.MustSingleton(NewJobHistoryStore)
 	app.MustSingleton(NewJobStatusStore)

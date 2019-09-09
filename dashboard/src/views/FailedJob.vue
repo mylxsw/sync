@@ -53,40 +53,38 @@
         },
         methods: {
             retryJob(id) {
-                if (!confirm('Are you sure to retry this job?')) {
-                    return false;
-                }
+                this.$bvModal.msgBoxConfirm('Are you sure to retry this job?').then((value) => {
+                    if (value !== true) {return;}
+                    axios.put('/api/failed-jobs/' + id + "/").then(response => {
+                        this.$bvToast.toast('Successful', {
+                            title: 'OK',
+                            variant: 'success',
+                        });
 
-                axios.put('/api/failed-jobs/' + id + "/").then(response => {
-                    this.$bvToast.toast('Successful', {
-                        title: 'OK',
-                        variant: 'success',
-                    });
-
-                    this.updatePage();
-                }).catch(error => {
-                    this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
-                        title: 'ERROR',
-                        variant: 'danger'
+                        this.updatePage();
+                    }).catch(error => {
+                        this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
+                            title: 'ERROR',
+                            variant: 'danger'
+                        });
                     });
                 });
             },
             deleteJob(id) {
-                if (!confirm('Are you sure to delete this job?')) {
-                    return false;
-                }
+                this.$bvModal.msgBoxConfirm('Are you sure to delete this job?').then((value) => {
+                    if (value !== true) {return;}
+                    axios.delete('/api/failed-jobs/' + id + "/").then(response => {
+                        this.$bvToast.toast('Successful', {
+                            title: 'OK',
+                            variant: 'success',
+                        });
 
-                axios.delete('/api/failed-jobs/' + id + "/").then(response => {
-                    this.$bvToast.toast('Successful', {
-                        title: 'OK',
-                        variant: 'success',
-                    });
-
-                    this.updatePage();
-                }).catch(error => {
-                    this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
-                        title: 'ERROR',
-                        variant: 'danger'
+                        this.updatePage();
+                    }).catch(error => {
+                        this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
+                            title: 'ERROR',
+                            variant: 'danger'
+                        });
                     });
                 });
             },
