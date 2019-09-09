@@ -37,11 +37,11 @@ type Rule struct {
 // FileSyncGroup 文件同步组
 type FileSyncGroup struct {
 	Name  string `json:"name" yaml:"name"`
-	From  string `json:"from" yaml:"from"`
-	Token string `json:"token,omitempty" yaml:"token,omitempty"`
+	Files []File `json:"files" yaml:"files"`
 
-	Files  []File       `json:"files" yaml:"files"`
-	Rules  []Rule       `json:"rules,omitempty" yaml:"rules"`
+	From   string       `json:"from,omitempty" yaml:"from,omitempty"`
+	Token  string       `json:"token,omitempty" yaml:"token,omitempty"`
+	Rules  []Rule       `json:"rules,omitempty" yaml:"rules,omitempty"`
 	Before []SyncAction `json:"before,omitempty" yaml:"before,omitempty"`
 	After  []SyncAction `json:"after,omitempty" yaml:"after,omitempty"`
 	Errors []SyncAction `json:"errors,omitempty" yaml:"errors,omitempty"`
@@ -242,11 +242,11 @@ func (syncAction SyncAction) commandHandler(data *SyncMatchData, stage *collecto
 	if ok, err := cmd.Run(); !ok || err != nil {
 		msg := cmd.StderrString()
 		if msg != "" {
-			stage.Error(fmt.Sprintf("command [%s] %s", syncAction.Command, msg))
+			stage.Error(fmt.Sprintf("command [%s] %s", commandStr, msg))
 		}
 
-		return errors.Wrap(err, fmt.Sprintf("command [%s] execute failed", syncAction.Command))
+		return errors.Wrap(err, fmt.Sprintf("command [%s] execute failed", commandStr))
 	}
-	stage.Info(fmt.Sprintf("[%s] %s", syncAction.Command, cmd.StdoutString()))
+	stage.Info(fmt.Sprintf("[%s] %s", commandStr, cmd.StdoutString()))
 	return nil
 }
