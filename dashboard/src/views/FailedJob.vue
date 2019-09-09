@@ -2,30 +2,30 @@
     <b-row class="mb-5">
         <b-col>
             <b-table :items="jobs" :fields="fields" :busy="isBusy" show-empty hover>
-                <template slot="id" slot-scope="row">
+                <template v-slot:cell(id)="row">
                     {{ row.item.name }} <br/>
                     <b>{{ row.item.id }}</b>
                 </template>
-                <template slot="actions" slot-scope="row">
+                <template v-slot:cell(actions)="row">
                     <b-button-group>
                         <b-button size="sm" variant="primary" @click="retryJob(row.item.id)">Retry</b-button>
                         <b-button size="sm" variant="danger" @click="deleteJob(row.item.id)">Delete</b-button>
                     </b-button-group>
                 </template>
-                <template slot="empty" slot-scope="scope">
+                <template v-slot:empty="scope">
                     {{ scope.emptyText }}
                 </template>
-                <template slot="files" slot-scope="row">
+                <template v-slot:cell(files)="row">
                     <b-list-group>
                         <b-list-group-item v-for="(file, index) in row.item.payload.files" :key="index">
                             {{ file.src }} <b class="text-success">=></b> {{ file.dest }}
                         </b-list-group-item>
                     </b-list-group>
                 </template>
-                <div slot="table-busy" class="text-center text-danger my-2">
+                <template v-slot:table-busy class="text-center text-danger my-2">
                     <b-spinner class="align-middle"></b-spinner>
                     <strong> Loading...</strong>
-                </div>
+                </template>
             </b-table>
         </b-col>
     </b-row>

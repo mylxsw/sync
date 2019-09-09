@@ -59,7 +59,7 @@ func main() {
 	app.AddFlags(altsrc.NewInt64Flag(cli.Int64Flag{
 		Name:  "job_history_keep_size",
 		Usage: "任务执行历史纪录保持数量",
-		Value: 20,
+		Value: 100,
 	}))
 	app.AddFlags(altsrc.NewBoolTFlag(cli.BoolTFlag{
 		Name:  "console_color",

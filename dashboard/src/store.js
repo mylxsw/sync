@@ -5,7 +5,7 @@ Vue.use(Vuex);
 
 export default new Vuex.Store({
     state: {
-        serverUrl: localStorage.getItem('server_url') || '',
+        serverUrl: localStorage.getItem('server_url') || (window.location.protocol + "//" + window.location.host),
         token: localStorage.getItem('token') || '',
     },
     mutations: {

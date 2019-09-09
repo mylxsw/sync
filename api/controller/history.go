@@ -46,7 +46,7 @@ type History struct {
 // @Success 200 {array} controller.History
 // @Router /histories/ [get]
 func (h *HistoryController) Recently(ctx *hades.WebContext, req *hades.HttpRequest, syncQueue queue.SyncQueue, historyStore storage.JobHistoryStore) hades.HTTPResponse {
-	limit := req.IntInput("limit", 10)
+	limit := req.IntInput("limit", 25)
 	if limit <= 0 || limit > 100 {
 		return ctx.JSONError("invalid limit argument", http.StatusUnprocessableEntity)
 	}

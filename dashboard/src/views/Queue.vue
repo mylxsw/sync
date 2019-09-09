@@ -2,19 +2,19 @@
     <b-row class="mb-5">
         <b-col>
             <b-table :items="jobs" :fields="fields" :busy="isBusy" show-empty>
-                <template slot="payload" slot-scope="row">
+                <template v-slot:cell(name)="row">
                     {{ row.item.payload.name }}
                 </template>
-                <template slot="payload" slot-scope="row">
+                <template v-slot:cell(payload)="row">
                     {{ row.item.payload.from }}
                 </template>
-                <template slot="empty" slot-scope="scope">
+                <template v-slot:empty="scope">
                     {{ scope.emptyText }}
                 </template>
-                <div slot="table-busy" class="text-center text-danger my-2">
+                <template v-slot:table-busy class="text-center text-danger my-2">
                     <b-spinner class="align-middle"></b-spinner>
                     <strong> Loading...</strong>
-                </div>
+                </template>
             </b-table>
         </b-col>
     </b-row>

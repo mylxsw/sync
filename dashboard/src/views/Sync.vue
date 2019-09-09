@@ -5,8 +5,9 @@
                 <b-button variant="primary" v-b-modal.newSyncModel>New Sync Definition</b-button>
                 <b-button variant="info" @click="batch_edit($event.target)" class="ml-2">Bulk Edit</b-button>
             </b-button-toolbar>
-            <b-table ref="selectableTable" :items="definitions" :busy="isBusy" :fields="fields" show-empty hover selectable select-mode="multi" selected-variant="success" @row-selected="onRowSelected">
-                <template slot="selected" slot-scope="{ rowSelected }">
+            <b-table ref="selectableTable" :items="definitions" :busy="isBusy" :fields="fields" show-empty hover
+                     selectable select-mode="multi" selected-variant="success" @row-selected="onRowSelected">
+                <template v-slot:cell(selected)="{ rowSelected }">
                     <template v-if="rowSelected">
                         <span aria-hidden="true">&check;</span>
                         <span class="sr-only">Selected</span>
@@ -16,17 +17,17 @@
                         <span class="sr-only">Not selected</span>
                     </template>
                 </template>
-                <template slot="files" slot-scope="row">
+                <template v-slot:cell(files)="row">
                     <b-list-group>
                         <b-list-group-item v-for="(file, index) in row.item.files" :key="index">
                             {{ file.src }} <b class="text-success">=></b> {{ file.dest }}
                         </b-list-group-item>
                     </b-list-group>
                 </template>
-                <template slot="empty" slot-scope="scope">
+                <template v-slot:empty="scope">
                     {{ scope.emptyText }}
                 </template>
-                <template slot="actions" slot-scope="row">
+                <template v-slot:cell(actions)="row">
                     <b-button-group>
                         <b-button size="sm" variant="primary" @click="trigger_job(row.item.name)" class="mr-2">Execute
                         </b-button>
@@ -38,16 +39,18 @@
                         </b-button>
                     </b-button-group>
                 </template>
-                <div slot="table-busy" class="text-center text-danger my-2">
+                <template v-slot:table-busy class="text-center text-danger my-2">
                     <b-spinner class="align-middle"></b-spinner>
                     <strong> Loading...</strong>
-                </div>
+                </template>
             </b-table>
 
-            <b-button-toolbar class="mt-2" v-if="selected.length > 0">
-                <b-button variant="primary" @click="trigger_jobs()">Execute</b-button>
-                <b-button variant="danger" class="ml-2" @click="delete_syncs()">Delete</b-button>
-                <b-button class="ml-2" @click="$refs.selectableTable.clearSelected()">Reset</b-button>
+            <b-button-toolbar class="mt-2">
+                <b-button variant="dark" @click="$refs.selectableTable.selectAllRows()">Select All</b-button>
+                <b-button class="ml-2" @click="$refs.selectableTable.clearSelected()" v-if="selected.length > 0">Reset</b-button>
+
+                <b-button variant="primary" class="ml-2" @click="trigger_jobs()" v-if="selected.length > 0">Execute</b-button>
+                <b-button variant="danger" class="ml-2" @click="delete_syncs()" v-if="selected.length > 0">Delete</b-button>
             </b-button-toolbar>
 
             <b-modal :id="infoModal.id" :title="infoModal.title" ok-only @hide="resetInfoModal" size="xl">
@@ -77,7 +80,7 @@
                 definitions: [],
                 isBusy: true,
                 fields: [
-                    {key: "selected", label: "Selected"},
+                    {key: "selected", label: "-"},
                     {key: "name", label: "Name"},
                     {key: "from", label: "From"},
                     {key: "files", label: "Files"},
@@ -240,7 +243,7 @@
              * batch edit sync definitions
              */
             batch_edit(button) {
-                axios.get('/api/sync/', {params:{format: 'yaml'}}).then(response => {
+                axios.get('/api/sync/', {params: {format: 'yaml'}}).then(response => {
                     this.newSyncModel.content = response.data;
                     this.$root.$emit('bv::show::modal', "newSyncModel", button);
                 }).catch(error => {

@@ -2,35 +2,35 @@
     <b-row class="mb-5">
         <b-col>
             <b-table :items="histories" :fields="fields" :busy="isBusy" show-empty hover>
-                <template slot="name" slot-scope="row">
+                <template v-slot:cell(name)="row">
                     {{ row.item.name }} <br/>
                     <b>{{ row.item.id }}</b>
                 </template>
-                <template slot="status" slot-scope="row">
+                <template v-slot:cell(status)="row">
                     <b-badge v-if="row.item.status === 'ok'" variant="success">OK</b-badge>
                     <b-badge v-if="row.item.status === 'unstable'" variant="warning">UNSTABLE</b-badge>
                     <b-badge v-if="row.item.status === 'running'" variant="dark">RUNNING</b-badge>
                     <b-badge v-if="row.item.status !== 'ok' && row.item.status !== 'unstable' && row.item.status !== 'running'" variant="danger">FAIL</b-badge>
                 </template>
-                <template slot="empty" slot-scope="scope">
+                <template v-slot:empty="scope">
                     {{ scope.emptyText }}
                 </template>
-                <template slot="operations" slot-scope="row">
+                <template v-slot:cell(operations)="row">
                     <b-button-group>
                         <b-button size="sm" @click="row.toggleDetails">{{ row.detailsShowing ? 'Hide' : 'Show'}} Details</b-button>
                         <b-button size="sm" variant="info" @click="console_output(row.item.id, $event.target)" class="mr-2" v-if="row.item.status !== 'running'">Console</b-button>
                         <b-button size="sm" variant="dark" :to="'/jobs/' + row.item.job_id + '/'" class="mr-2" v-if="row.item.status === 'running'">Console</b-button>
                     </b-button-group>
                 </template>
-                <template slot="row-details" slot-scope="row">
+                <template v-slot:row-details="row">
                     <b-card bg-variant="dark" text-variant="white">
                         <b-card-text>{{ row.item.status }}</b-card-text>
                     </b-card>
                 </template>
-                <div slot="table-busy" class="text-center text-danger my-2">
+                <template v-slot:table-busy class="text-center text-danger my-2">
                     <b-spinner class="align-middle"></b-spinner>
                     <strong> Loading...</strong>
-                </div>
+                </template>
             </b-table>
             <b-modal :id="infoModal.id" size="xl" scrollable :title="infoModal.title" ok-only @hide="resetInfoModal">
                 <div role="tablist">
