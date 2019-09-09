@@ -43,6 +43,7 @@ type FileSyncGroup struct {
 	Rules  []Rule       `json:"rules,omitempty" yaml:"rules"`
 	Before []SyncAction `json:"before,omitempty" yaml:"before,omitempty"`
 	After  []SyncAction `json:"after,omitempty" yaml:"after,omitempty"`
+	Errors []SyncAction `json:"errors,omitempty" yaml:"errors,omitempty"`
 }
 
 func (fsg *FileSyncGroup) Encode() []byte {
@@ -62,22 +63,28 @@ type SyncUnit struct {
 
 // SyncAction 文件同步前置后置任务
 type SyncAction struct {
-	Action  string `json:"action,omitempty" yaml:"action,omitempty"`
-	Match   string `json:"match,omitempty" yaml:"match,omitempty"`
-	Replace string `json:"replace,omitempty" yaml:"replace,omitempty"`
-	Command string `json:"command,omitempty" yaml:"command,omitempty"`
-	When    string `json:"when,omitempty" yaml:"when,omitempty"`
+	Action        string `json:"action,omitempty" yaml:"action,omitempty"`
+	Match         string `json:"match,omitempty" yaml:"match,omitempty"`
+	Replace       string `json:"replace,omitempty" yaml:"replace,omitempty"`
+	Command       string `json:"command,omitempty" yaml:"command,omitempty"`
+	When          string `json:"when,omitempty" yaml:"when,omitempty"`
+	ParseTemplate bool   `json:"parse_template,omitempty" yaml:"parse_template,omitempty"`
 }
 
 type SyncMatchData struct {
 	Units []SyncUnit
+	Err   error
+}
+
+func NewSyncMatchData(units []SyncUnit, err error) *SyncMatchData {
+	return &SyncMatchData{Units: units, Err: err}
 }
 
 // Matched return if the action should be executed base on `When` option
 // If `When` option is empty, we will think the expression is matched as a default behavior,
 // Otherwise we parse the `When` expression
 // If the `When` expression has some error, we just think the expression not match
-func (syncAction SyncAction) Matched(units []SyncUnit) bool {
+func (syncAction SyncAction) Matched(data *SyncMatchData) bool {
 	if syncAction.When == "" {
 		return true
 	}
@@ -90,7 +97,7 @@ func (syncAction SyncAction) Matched(units []SyncUnit) bool {
 		return false
 	}
 
-	rs, err := expr.Run(program, &SyncMatchData{Units: units})
+	rs, err := expr.Run(program, data)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"action": syncAction,
@@ -133,12 +140,22 @@ func (syncAction SyncAction) workDir(units []SyncUnit) string {
 	return ""
 }
 
-func (syncAction SyncAction) Execute(units []SyncUnit, stage *collector.Stage) error {
+func (syncAction SyncAction) Execute(data *SyncMatchData, stage *collector.Stage) error {
 	switch syncAction.Action {
 	case "command":
-		cmd := executor.New("sh", "-c", syncAction.Command)
+		commandStr := syncAction.Command
+		if syncAction.ParseTemplate {
+			cs, err := ParseTemplate(syncAction.Command, data)
+			if err != nil {
+				stage.Error(fmt.Sprintf("parse command [%s] as template failed: %s", syncAction.Command, err))
+			} else {
+				commandStr = cs
+			}
+		}
+
+		cmd := executor.New("sh", "-c", commandStr)
 		cmd.Init(func(cmd *exec.Cmd) error {
-			workDir := syncAction.workDir(units)
+			workDir := syncAction.workDir(data.Units)
 			if workDir != "" {
 				cmd.Dir = workDir
 			}
