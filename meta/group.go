@@ -39,7 +39,7 @@ type Rule struct {
 // FileSyncGroup 文件同步组
 type FileSyncGroup struct {
 	Name  string `json:"name" yaml:"name"`
-	Files []File `json:"Files" yaml:"Files"`
+	Files []File `json:"files" yaml:"files"`
 
 	From   string       `json:"from,omitempty" yaml:"from,omitempty"`
 	Token  string       `json:"token,omitempty" yaml:"token,omitempty"`

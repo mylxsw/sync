@@ -157,10 +157,6 @@ definitions:
     type: object
   meta.FileSyncGroup:
     properties:
-      Files:
-        items:
-          $ref: '#/definitions/meta.File'
-        type: array
       after:
         items:
           $ref: '#/definitions/meta.SyncAction'
@@ -172,6 +168,10 @@ definitions:
       error:
         items:
           $ref: '#/definitions/meta.SyncAction'
+        type: array
+      files:
+        items:
+          $ref: '#/definitions/meta.File'
         type: array
       from:
         type: string
@@ -398,6 +398,33 @@ paths:
       summary: 运行中的任务状态，基于websocket
       tags:
       - RunningJobs
+  /setting/global-sync/:
+    get:
+      parameters:
+      - description: 输出格式：yaml/json
+        in: query
+        name: format
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/meta.GlobalFileSyncSetting'
+      summary: 全局同步配置
+      tags:
+      - Setting
+    post:
+      parameters:
+      - description: 全局同步定义
+        in: body
+        name: def
+        required: true
+        schema:
+          $ref: '#/definitions/meta.GlobalFileSyncSetting'
+          type: object
+      summary: 更新全局同步配置
+      tags:
+      - Setting
   /sync-bulk/:
     delete:
       parameters:

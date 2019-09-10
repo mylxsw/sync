@@ -101,7 +101,7 @@
                 this.token = this.$store.getters.token;
             },
             refreshSyncActionSetting() {
-                axios.get('/api/setting/global-sync/', {responseType: 'text'}).then(response => {
+                axios.get('/api/setting/global-sync/', {responseType: 'text', params: {format: 'yaml'}}).then(response => {
                     this.globalSyncActions = typeof response.data === 'string' ? response.data : '';
                 }).catch(error => {
                     this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {

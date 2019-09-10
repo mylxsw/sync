@@ -156,7 +156,7 @@ func (s *SyncDefinitionController) QueryDefinition(ctx *hades.WebContext, req *h
 // @Param format query string false "输出格式：yaml/json"
 // @Success 200 {array} meta.FileSyncGroup
 // @Router /sync/ [get]
-func (s *SyncDefinitionController) AllDefinitions(ctx *hades.WebContext, req *hades.HttpRequest, defStore storage.DefinitionStore) hades.HTTPResponse {
+func (s *SyncDefinitionController) AllDefinitions(ctx *hades.WebContext, req *hades.HttpRequest, defStore storage.DefinitionStore, settingFactory storage.SettingFactory) hades.HTTPResponse {
 	resFormat := req.InputWithDefault("format", "json")
 	if resFormat != "json" && resFormat != "yaml" {
 		return ctx.JSONError("invalid format, only support json/yaml", http.StatusUnprocessableEntity)

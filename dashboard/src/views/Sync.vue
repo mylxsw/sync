@@ -24,6 +24,10 @@
                         </b-list-group-item>
                     </b-list-group>
                 </template>
+                <template v-slot:cell(from)="row">
+                    <span v-if="row.item.from === '' || row.item.from === undefined">{{ globalSyncActions.from }} <b-badge variant="primary" title="Global Sync Setting">G</b-badge></span>
+                    <span v-else>{{ row.item.from }}</span>
+                </template>
                 <template v-slot:empty="scope">
                     {{ scope.emptyText }}
                 </template>
@@ -96,6 +100,10 @@
                     id: 'info-modal',
                     title: '',
                     content: ''
+                },
+                globalSyncActions: {
+                    from: '',
+                    token: '',
                 },
                 selected: [],
             };
@@ -303,10 +311,15 @@
              * refresh table contents
              */
             refreshPage() {
-                axios.get('/api/sync/').then(response => {
-                    this.definitions = response.data;
+                axios.all([
+                    axios.get('/api/sync/'),
+                    axios.get('/api/setting/global-sync/', {responseType: 'text', params: {format: 'json'}})
+                ]).then(axios.spread((syncResp, settingResp) => {
+                    this.definitions = syncResp.data;
                     this.isBusy = false;
-                }).catch(error => {
+
+                    this.globalSyncActions = settingResp.data;
+                })).catch((error) => {
                     this.$bvToast.toast(error.response !== undefined ? error.response.data.error : error.toString(), {
                         title: 'ERROR',
                         variant: 'danger'

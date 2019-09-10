@@ -255,6 +255,48 @@
                 "summary": "运行中的任务状态，基于websocket"
             }
         },
+        "/setting/global-sync/": {
+            "get": {
+                "tags": [
+                    "Setting"
+                ],
+                "summary": "全局同步配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "输出格式：yaml/json",
+                        "name": "format",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/meta.GlobalFileSyncSetting"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Setting"
+                ],
+                "summary": "更新全局同步配置",
+                "parameters": [
+                    {
+                        "description": "全局同步定义",
+                        "name": "def",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/meta.GlobalFileSyncSetting"
+                        }
+                    }
+                ]
+            }
+        },
         "/sync-bulk/": {
             "delete": {
                 "tags": [
@@ -644,12 +686,6 @@
         "meta.FileSyncGroup": {
             "type": "object",
             "properties": {
-                "Files": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/meta.File"
-                    }
-                },
                 "after": {
                     "type": "array",
                     "items": {
@@ -666,6 +702,12 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/meta.SyncAction"
+                    }
+                },
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/meta.File"
                     }
                 },
                 "from": {
