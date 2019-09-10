@@ -1,4 +1,4 @@
-package client
+package meta
 
 import (
 	"github.com/mylxsw/sync/protocol"
@@ -18,13 +18,14 @@ func (fns FileNeedSync) NeedSync() bool {
 }
 
 type FileNeedSyncs struct {
-	files []FileNeedSync
+	Files []FileNeedSync
 }
 
 func (fns *FileNeedSyncs) Add(n FileNeedSync) {
-	fns.files = append(fns.files, n)
+	fns.Files = append(fns.Files, n)
 }
 
 func (fns *FileNeedSyncs) All() []FileNeedSync {
-	return fns.files
+	return fns.Files
 }
+

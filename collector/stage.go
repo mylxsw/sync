@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -67,6 +68,14 @@ func (s *Stage) Info(message string) {
 		Message:   message,
 	}
 	s.Messages = append(s.Messages, msg)
+}
+
+func (s *Stage) Infof(format string, a ...interface{}) {
+	s.Info(fmt.Sprintf(format, a...))
+}
+
+func (s *Stage) Errorf(format string, a ...interface{}) {
+	s.Error(fmt.Sprintf(format, a...))
 }
 
 // Error 错误输出

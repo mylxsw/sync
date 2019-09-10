@@ -621,11 +621,20 @@
                 "dest": {
                     "type": "string"
                 },
+                "error": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/meta.SyncAction"
+                    }
+                },
                 "ignores": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
+                },
+                "skip_when_error": {
+                    "type": "boolean"
                 },
                 "src": {
                     "type": "string"
@@ -635,6 +644,12 @@
         "meta.FileSyncGroup": {
             "type": "object",
             "properties": {
+                "Files": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/meta.File"
+                    }
+                },
                 "after": {
                     "type": "array",
                     "items": {
@@ -647,16 +662,10 @@
                         "$ref": "#/definitions/meta.SyncAction"
                     }
                 },
-                "errors": {
+                "error": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/meta.SyncAction"
-                    }
-                },
-                "files": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/meta.File"
                     }
                 },
                 "from": {

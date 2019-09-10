@@ -123,7 +123,7 @@
                     '  after:\n' +
                     '  - action: command\n' +
                     '    command: curl -i https://www.baidu.com\n' +
-                    '  errors:\n' +
+                    '  error:\n' +
                     '  - action: dingding\n' +
                     '    body: "## Server {{ sysinfo \\"hostname\\" }} : {{ .FileSyncGroup.Name }} Has errors\\n\\n**IP:**\n' +
                     '      {{ sysinfo \\"ip\\" }}\\n\\n**ERR:** \\n\\n    {{ .Err }}\\n"\n' +

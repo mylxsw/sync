@@ -27,8 +27,10 @@ import (
 type FileSyncClient interface {
 	// SyncMeta 同步文件元数据
 	SyncMeta(fileToSync meta.File) ([]*protocol.File, error)
+	// SyncDiff 同步文件比较，用于获取本次要同步的文件
+	SyncDiff(files []*protocol.File, savePath func(f *protocol.File) string, syncOwner bool) (meta.FileNeedSyncs, error)
 	// SyncFiles 同步文件
-	SyncFiles(files []*protocol.File, savePath func(f *protocol.File) string, syncOwner bool, stage *collector.Stage) error
+	SyncFiles(fileNeedSyncs meta.FileNeedSyncs, stage *collector.Stage) error
 }
 
 // fileSyncClient 文件同步客户端
@@ -50,33 +52,27 @@ func (fs *fileSyncClient) SyncMeta(fileToSync meta.File) ([]*protocol.File, erro
 	return resp.Files, nil
 }
 
-// Sync 执行文件同步
-func (fs *fileSyncClient) SyncFiles(files []*protocol.File, savePath func(f *protocol.File) string, syncOwner bool, stage *collector.Stage) error {
-	var fileNeedSyncs = FileNeedSyncs{files: make([]FileNeedSync, 0)}
+func (fs *fileSyncClient) SyncDiff(files []*protocol.File, savePath func(f *protocol.File) string, syncOwner bool) (meta.FileNeedSyncs, error) {
+	var fileNeedSyncs = meta.FileNeedSyncs{Files: make([]meta.FileNeedSync, 0)}
 	// 目录同步
 	if err := fs.applyFiles(files, protocol.Type_Directory, fs.syncDirectoryInit(syncOwner, &fileNeedSyncs), savePath); err != nil {
-		return err
+		return fileNeedSyncs, err
 	}
 
 	// 文件同步
 	if err := fs.applyFiles(files, protocol.Type_Normal, fs.syncNormalFileInit(syncOwner, &fileNeedSyncs), savePath); err != nil {
-		return err
+		return fileNeedSyncs, err
 	}
 
 	// 符号链接同步
 	if err := fs.applyFiles(files, protocol.Type_Symlink, fs.syncSymlinkInit(syncOwner, &fileNeedSyncs), savePath); err != nil {
-		return err
+		return fileNeedSyncs, err
 	}
 
-	e := fs.realSync(fileNeedSyncs, stage)
-	if e != nil {
-		return e
-	}
-
-	return nil
+	return fileNeedSyncs, nil
 }
 
-func (fs *fileSyncClient) realSync(fileNeedSyncs FileNeedSyncs, stage *collector.Stage) error {
+func (fs *fileSyncClient) SyncFiles(fileNeedSyncs meta.FileNeedSyncs, stage *collector.Stage) error {
 	files := fileNeedSyncs.All()
 	progress := stage.Progress(len(files))
 	for _, ff := range files {
@@ -123,9 +119,9 @@ func (fs *fileSyncClient) realSync(fileNeedSyncs FileNeedSyncs, stage *collector
 	return nil
 }
 
-func (fs *fileSyncClient) syncSymlinkInit(syncOwner bool, fileNeedSyncs *FileNeedSyncs) func(f *protocol.File, savedFilePath string) error {
+func (fs *fileSyncClient) syncSymlinkInit(syncOwner bool, fileNeedSyncs *meta.FileNeedSyncs) func(f *protocol.File, savedFilePath string) error {
 	return func(f *protocol.File, savedFilePath string) error {
-		fileNeedSync := FileNeedSync{
+		fileNeedSync := meta.FileNeedSync{
 			SaveFilePath: savedFilePath,
 			Type:         protocol.Type_Symlink,
 			RemoteFile:   f,
@@ -149,9 +145,9 @@ func (fs *fileSyncClient) syncSymlinkInit(syncOwner bool, fileNeedSyncs *FileNee
 	}
 }
 
-func (fs *fileSyncClient) syncNormalFileInit(syncOwner bool, fileNeedSyncs *FileNeedSyncs) func(f *protocol.File, savedFilePath string) error {
+func (fs *fileSyncClient) syncNormalFileInit(syncOwner bool, fileNeedSyncs *meta.FileNeedSyncs) func(f *protocol.File, savedFilePath string) error {
 	return func(f *protocol.File, savedFilePath string) error {
-		fileNeedSync := FileNeedSync{
+		fileNeedSync := meta.FileNeedSync{
 			SaveFilePath: savedFilePath,
 			Type:         protocol.Type_Normal,
 			RemoteFile:   f,
@@ -175,9 +171,9 @@ func (fs *fileSyncClient) syncNormalFileInit(syncOwner bool, fileNeedSyncs *File
 	}
 }
 
-func (fs *fileSyncClient) syncDirectoryInit(syncOwner bool, fileNeedSyncs *FileNeedSyncs) func(f *protocol.File, savedFilePath string) error {
+func (fs *fileSyncClient) syncDirectoryInit(syncOwner bool, fileNeedSyncs *meta.FileNeedSyncs) func(f *protocol.File, savedFilePath string) error {
 	return func(f *protocol.File, savedFilePath string) error {
-		fileNeedSync := FileNeedSync{
+		fileNeedSync := meta.FileNeedSync{
 			SaveFilePath: savedFilePath,
 			Type:         protocol.Type_Directory,
 			RemoteFile:   f,

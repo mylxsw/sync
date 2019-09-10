@@ -18,11 +18,13 @@ import (
 
 // File 一个待同步的文件
 type File struct {
-	Src     string       `json:"src" yaml:"src"`
-	Dest    string       `json:"dest" yaml:"dest"`
-	Ignores []string     `json:"ignores,omitempty" yaml:"ignores,omitempty"`
-	After   []SyncAction `json:"after,omitempty" yaml:"after,omitempty"`
-	Before  []SyncAction `json:"before,omitempty" yaml:"before,omitempty"`
+	Src           string       `json:"src" yaml:"src"`
+	Dest          string       `json:"dest" yaml:"dest"`
+	Ignores       []string     `json:"ignores,omitempty" yaml:"ignores,omitempty"`
+	After         []SyncAction `json:"after,omitempty" yaml:"after,omitempty"`
+	Before        []SyncAction `json:"before,omitempty" yaml:"before,omitempty"`
+	Error         []SyncAction `json:"error,omitempty" yaml:"error,omitempty"`
+	SkipWhenError bool         `json:"skip_when_error,omitempty" yaml:"skip_when_error,omitempty"`
 }
 
 // Rule 规则
@@ -37,14 +39,14 @@ type Rule struct {
 // FileSyncGroup 文件同步组
 type FileSyncGroup struct {
 	Name  string `json:"name" yaml:"name"`
-	Files []File `json:"files" yaml:"files"`
+	Files []File `json:"Files" yaml:"Files"`
 
 	From   string       `json:"from,omitempty" yaml:"from,omitempty"`
 	Token  string       `json:"token,omitempty" yaml:"token,omitempty"`
 	Rules  []Rule       `json:"rules,omitempty" yaml:"rules,omitempty"`
 	Before []SyncAction `json:"before,omitempty" yaml:"before,omitempty"`
 	After  []SyncAction `json:"after,omitempty" yaml:"after,omitempty"`
-	Errors []SyncAction `json:"errors,omitempty" yaml:"errors,omitempty"`
+	Error  []SyncAction `json:"error,omitempty" yaml:"error,omitempty"`
 }
 
 func (fsg *FileSyncGroup) Encode() []byte {
@@ -105,14 +107,17 @@ type SyncAction struct {
 	Token string `json:"token,omitempty" yaml:"token,omitempty"`
 }
 
+// SyncMatchData is a data holder for syncAction templates
 type SyncMatchData struct {
+	JobID         string
+	FileNeedSyncs FileNeedSyncs // only available in file sync stage
 	FileSyncGroup FileSyncGroup
 	Units         []SyncUnit
-	Err           error
+	Err           error // only available in errors stage
 }
 
-func NewSyncMatchData(grp FileSyncGroup, units []SyncUnit, err error) *SyncMatchData {
-	return &SyncMatchData{FileSyncGroup: grp, Units: units, Err: err}
+func NewSyncMatchData(jobID string, grp FileSyncGroup, units []SyncUnit, fileNeedSyncs FileNeedSyncs, err error) *SyncMatchData {
+	return &SyncMatchData{JobID: jobID, FileSyncGroup: grp, Units: units, Err: err, FileNeedSyncs: fileNeedSyncs,}
 }
 
 // Matched return if the action should be executed base on `When` option

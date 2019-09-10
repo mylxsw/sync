@@ -142,15 +142,25 @@ definitions:
         type: array
       dest:
         type: string
+      error:
+        items:
+          $ref: '#/definitions/meta.SyncAction'
+        type: array
       ignores:
         items:
           type: string
         type: array
+      skip_when_error:
+        type: boolean
       src:
         type: string
     type: object
   meta.FileSyncGroup:
     properties:
+      Files:
+        items:
+          $ref: '#/definitions/meta.File'
+        type: array
       after:
         items:
           $ref: '#/definitions/meta.SyncAction'
@@ -159,13 +169,9 @@ definitions:
         items:
           $ref: '#/definitions/meta.SyncAction'
         type: array
-      errors:
+      error:
         items:
           $ref: '#/definitions/meta.SyncAction'
-        type: array
-      files:
-        items:
-          $ref: '#/definitions/meta.File'
         type: array
       from:
         type: string
