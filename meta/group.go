@@ -217,7 +217,6 @@ func (syncAction SyncAction) dingdingHandler(data *SyncMatchData, stage *collect
 	dingClient := ding.NewDingding(syncAction.Token)
 	if err := dingClient.Send(msg); err != nil {
 		stage.Error(fmt.Sprintf("dingding send message failed: %s", err))
-		return errors.Wrapf(err, "dingding send message failed")
 	} else {
 		stage.Info("dingding send message success")
 	}
