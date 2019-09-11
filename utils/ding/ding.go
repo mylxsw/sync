@@ -10,6 +10,21 @@ import (
 	"github.com/mylxsw/asteria/log"
 )
 
+// DingdingMessage is a message holds all informations for a dingding sender
+type DingdingMessage struct {
+	Message MarkdownMessage `json:"message"`
+	Token   string          `json:"token"`
+}
+
+func (dm *DingdingMessage) Encode() []byte {
+	data, _ := json.Marshal(dm)
+	return data
+}
+
+func (dm *DingdingMessage) Decode(data []byte) error {
+	return json.Unmarshal(data, &dm)
+}
+
 // MarkdownMessage is a markdown message for dingding
 type MarkdownMessage struct {
 	Type     string              `json:"msgtype,omitempty"`

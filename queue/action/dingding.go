@@ -17,7 +17,7 @@ type dingdingAction struct {
 }
 
 func newDingdingAction(syncAction *meta.SyncAction, data *SyncMatchData, cc *container.Container) Action {
-	act := dingdingAction{syncAction: syncAction, data: data, }
+	act := dingdingAction{syncAction: syncAction, data: data,}
 
 	cc.MustResolve(func(queueFact storage.QueueStoreFactory) {
 		act.ddQueue = queueFact.Queue(storage.QueueDingding)
@@ -47,11 +47,15 @@ func (act dingdingAction) Execute(stage *collector.Stage) error {
 		[]string{},
 	)
 
-	dingClient := ding.NewDingding(act.syncAction.Token)
-	if err := dingClient.Send(msg); err != nil {
-		stage.Error(fmt.Sprintf("dingding send message failed: %s", err))
+	dingdingMessage := ding.DingdingMessage{
+		Message: msg,
+		Token:   act.syncAction.Token,
+	}
+
+	if err := act.ddQueue.Enqueue(dingdingMessage.Encode()); err != nil {
+		stage.Error(fmt.Sprintf("dingding message enqueue failed: %s", err))
 	} else {
-		stage.Info("dingding send message success")
+		stage.Info("dingding message enqueued")
 	}
 
 	return nil
