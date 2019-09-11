@@ -14,6 +14,7 @@ type DingdingConsumer struct {
 	maxSendSize int
 }
 
+// NewDingdingConsumer create a new DingdingConsumer
 func NewDingdingConsumer(cc *container.Container) period_job.Job {
 	consumer := DingdingConsumer{maxSendSize: 5,}
 	cc.MustResolve(func(qsf storage.QueueStoreFactory) {
@@ -34,6 +35,7 @@ func (d *DingdingConsumer) Handle() {
 			return
 		}
 
+		// if payload is nil, the queue is empty
 		if payload == nil {
 			return
 		}

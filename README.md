@@ -7,6 +7,7 @@ Sync Definition:
       files: // 待同步的文件组，必填
       - src: /var/log // 源文件（夹）
         dest: /tmp/logs // 目标文件（夹）
+        delete: true // 是否删除文件，默认false，设置为true，则会对比本地和远端，删除本地多余文件
         ignores: // 忽略的文件，gitignore 格式
         - .git/
         - .DS_Store

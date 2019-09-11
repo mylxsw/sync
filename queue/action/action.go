@@ -14,12 +14,13 @@ type SyncMatchData struct {
 	FileNeedSyncs meta.FileNeedSyncs // only available in file sync stage
 	FileSyncGroup meta.FileSyncGroup
 	Units         []meta.SyncUnit
+	DeleteUnits   []meta.SyncUnit
 	Err           error // only available in errors stage
 }
 
 // NewSyncMatchData create a new SyncMatchData
-func NewSyncMatchData(jobID string, grp meta.FileSyncGroup, units []meta.SyncUnit, fileNeedSyncs meta.FileNeedSyncs, err error) *SyncMatchData {
-	return &SyncMatchData{JobID: jobID, FileSyncGroup: grp, Units: units, Err: err, FileNeedSyncs: fileNeedSyncs,}
+func NewSyncMatchData(jobID string, grp meta.FileSyncGroup, units []meta.SyncUnit, deleteUnits []meta.SyncUnit, fileNeedSyncs meta.FileNeedSyncs, err error) *SyncMatchData {
+	return &SyncMatchData{JobID: jobID, FileSyncGroup: grp, Units: units, DeleteUnits: deleteUnits, Err: err, FileNeedSyncs: fileNeedSyncs,}
 }
 
 // Factory is a factory for creating Action

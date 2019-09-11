@@ -10,6 +10,7 @@ import (
 type File struct {
 	Src           string       `json:"src" yaml:"src"`
 	Dest          string       `json:"dest" yaml:"dest"`
+	Delete        bool         `json:"delete,omitempty" yaml:"delete,omitempty"`
 	Ignores       []string     `json:"ignores,omitempty" yaml:"ignores,omitempty"`
 	After         []SyncAction `json:"after,omitempty" yaml:"after,omitempty"`
 	Before        []SyncAction `json:"before,omitempty" yaml:"before,omitempty"`

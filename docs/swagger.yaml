@@ -145,6 +145,8 @@ definitions:
         items:
           $ref: '#/definitions/meta.SyncAction'
         type: array
+      delete:
+        type: boolean
       dest:
         type: string
       error:

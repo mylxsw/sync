@@ -57,7 +57,11 @@ func (s *SyncServer) SyncFile(req *protocol.DownloadRequest, serv protocol.SyncS
 
 // Sync 文件元信息同步
 func (s *SyncServer) SyncMeta(ctx context.Context, req *protocol.SyncRequest) (*protocol.SyncResponse, error) {
-	matches, err := filepath.Glob(req.Path)
+	return CreateLocalFileMetaResponse(req.Path, req.Ignores)
+}
+
+func CreateLocalFileMetaResponse(path string, ignores []string) (*protocol.SyncResponse, error) {
+	matches, err := filepath.Glob(path)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid glob expression")
 	}
@@ -72,8 +76,8 @@ func (s *SyncServer) SyncMeta(ctx context.Context, req *protocol.SyncRequest) (*
 		files = append(files, ffs...)
 	}
 
-	if len(req.Ignores) > 0 {
-		ignorer, err := ignore.CompileIgnoreLines(req.Ignores...)
+	if len(ignores) > 0 {
+		ignorer, err := ignore.CompileIgnoreLines(ignores...)
 		if err != nil {
 			return nil, errors.Wrap(err, "compile ignore lines failed")
 		}

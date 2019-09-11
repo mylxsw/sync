@@ -667,6 +667,9 @@
                         "$ref": "#/definitions/meta.SyncAction"
                     }
                 },
+                "delete": {
+                    "type": "boolean"
+                },
                 "dest": {
                     "type": "string"
                 },

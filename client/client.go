@@ -91,7 +91,7 @@ func (fs *fileSyncClient) SyncFiles(fileNeedSyncs meta.FileNeedSyncs, stage *col
 					return fmt.Errorf("create symlink %s -> %s, but failed: %s", ff.SaveFilePath, ff.RemoteFile.Symlink, err)
 				}
 
-				stage.Info(fmt.Sprintf("symlink %s -> %s", ff.SaveFilePath, ff.RemoteFile.Symlink))
+				stage.Info(fmt.Sprintf("ln %s -> %s", ff.SaveFilePath, ff.RemoteFile.Symlink))
 			}
 		}
 
@@ -111,6 +111,14 @@ func (fs *fileSyncClient) SyncFiles(fileNeedSyncs meta.FileNeedSyncs, stage *col
 		if ff.SyncOwner {
 			if err := fs.syncFileOwner(ff.SaveFilePath, ff.RemoteFile); err != nil {
 				stage.Error(err.Error())
+			}
+		}
+
+		if ff.Delete {
+			if err := os.RemoveAll(ff.SaveFilePath); err != nil {
+				stage.Errorf("rm -fr %s failed: %s", ff.SaveFilePath, err)
+			} else {
+				stage.Infof("rm -fr %s", ff.SaveFilePath)
 			}
 		}
 
@@ -294,7 +302,7 @@ func (fs *fileSyncClient) syncNormalFiles(f *protocol.File, savedFilePath string
 	}
 
 	stage.Info(fmt.Sprintf(
-		"%s -> %s (elapse=%v size=%s)",
+		"copy %s -> %s (elapse=%v size=%s)",
 		remoteFileName,
 		savedFilePath,
 		time.Now().Sub(startTs),
@@ -305,7 +313,7 @@ func (fs *fileSyncClient) syncNormalFiles(f *protocol.File, savedFilePath string
 	finger, _ := checksum.MD5sum(savedFilePath)
 	if finger != f.Checksum {
 		stage.Error(fmt.Sprintf(
-			"%s -> %s (checksum not match: %s != %s)",
+			"copy %s -> %s (checksum not match: %s != %s)",
 			remoteFileName,
 			savedFilePath,
 			finger,

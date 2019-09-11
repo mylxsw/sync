@@ -55,7 +55,7 @@
             retryJob(id) {
                 this.$bvModal.msgBoxConfirm('Are you sure to retry this job?').then((value) => {
                     if (value !== true) {return;}
-                    axios.put('/api/failed-jobs/' + id + "/").then(response => {
+                    axios.put('/api/failed-jobs/' + id + "/").then(() => {
                         this.$bvToast.toast('Successful', {
                             title: 'OK',
                             variant: 'success',
@@ -73,7 +73,7 @@
             deleteJob(id) {
                 this.$bvModal.msgBoxConfirm('Are you sure to delete this job?').then((value) => {
                     if (value !== true) {return;}
-                    axios.delete('/api/failed-jobs/' + id + "/").then(response => {
+                    axios.delete('/api/failed-jobs/' + id + "/").then(() => {
                         this.$bvToast.toast('Successful', {
                             title: 'OK',
                             variant: 'success',

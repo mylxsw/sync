@@ -9,12 +9,13 @@ type FileNeedSync struct {
 	SyncOwner    bool
 	SyncFile     bool
 	Chmod        bool
+	Delete       bool
 	Type         protocol.Type
 	RemoteFile   *protocol.File
 }
 
 func (fns FileNeedSync) NeedSync() bool {
-	return fns.SyncFile || fns.SyncOwner || fns.Chmod
+	return fns.SyncFile || fns.SyncOwner || fns.Chmod || fns.Delete
 }
 
 type FileNeedSyncs struct {
@@ -28,4 +29,3 @@ func (fns *FileNeedSyncs) Add(n FileNeedSync) {
 func (fns *FileNeedSyncs) All() []FileNeedSync {
 	return fns.Files
 }
-
