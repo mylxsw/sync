@@ -70,12 +70,14 @@ func (s *Stage) Info(message string) {
 	s.Messages = append(s.Messages, msg)
 }
 
-func (s *Stage) Infof(format string, a ...interface{}) {
+func (s *Stage) Infof(format string, a ...interface{}) string {
 	s.Info(fmt.Sprintf(format, a...))
+	return fmt.Sprintf(format, a...)
 }
 
-func (s *Stage) Errorf(format string, a ...interface{}) {
+func (s *Stage) Errorf(format string, a ...interface{}) error {
 	s.Error(fmt.Sprintf(format, a...))
+	return fmt.Errorf(format, a...)
 }
 
 // Error 错误输出

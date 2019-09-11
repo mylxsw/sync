@@ -15,6 +15,7 @@ import (
 	"github.com/mylxsw/sync/scheduler"
 	"github.com/mylxsw/sync/server"
 	"github.com/mylxsw/sync/storage"
+	"github.com/mylxsw/sync/utils"
 	"github.com/urfave/cli"
 	"github.com/urfave/cli/altsrc"
 )
@@ -28,46 +29,51 @@ func main() {
 
 	app.AddFlags(altsrc.NewInt64Flag(cli.Int64Flag{
 		Name:  "file_transfer_buffer_size",
-		Usage: "文件传输缓冲区大小",
+		Usage: "file transfer buffer size for rpc stream",
 		Value: 10240,
 	}))
 	app.AddFlags(altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "rpc_listen_addr",
-		Usage: "GRPC 服务监听地址，用于内部不同的服务实例之间通信",
+		Usage: "GRPC server listen addr for internal server communication",
 		Value: ":8818",
 	}))
 	app.AddFlags(altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "rpc_token",
-		Usage: "GRPC 授权 TOKEN，用于其它服务调用本服务时鉴权",
+		Usage: "GRPC access token",
 		Value: "",
 	}))
 	app.AddFlags(altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "api_token",
-		Usage: "API TOKEN，API 接口请求鉴权 TOKEN",
+		Usage: "API Token for api access control",
 		Value: "",
 	}))
 	app.AddFlags(altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "db",
-		Usage: "本地数据库存储文件",
+		Usage: "local database storage path",
 		Value: "/data/sync_db",
 	}))
 	app.AddFlags(altsrc.NewIntFlag(cli.IntFlag{
 		Name:  "file_sync_worker_num",
-		Usage: "文件同步 Worker 数量",
+		Usage: "worker count for file sync",
 		Value: 3,
 	}))
 	app.AddFlags(altsrc.NewInt64Flag(cli.Int64Flag{
 		Name:  "job_history_keep_size",
-		Usage: "任务执行历史纪录保持数量",
+		Usage: "job history's count to keep",
 		Value: 100,
 	}))
 	app.AddFlags(altsrc.NewBoolTFlag(cli.BoolTFlag{
 		Name:  "console_color",
-		Usage: "彩色日志输出",
+		Usage: "log colorful for console",
 	}))
 	app.AddFlags(altsrc.NewBoolFlag(cli.BoolFlag{
 		Name:  "use_local_dashboard",
-		Usage: "是否使用本地的dashboard目录，启用后，会使用 dashboard/dist/ 目录下的静态资源，开发时使用该选项",
+		Usage: "whether using local dashboard, this is used when development",
+	}))
+	app.AddFlags(altsrc.NewStringSliceFlag(cli.StringSliceFlag{
+		Name:  "allow_files",
+		Usage: "limit files or directories can be sync",
+		Value: &cli.StringSlice{"/data",},
 	}))
 
 	app.BeforeInitialize(func(c *cli.Context) error {
@@ -85,6 +91,7 @@ func main() {
 			RPCToken:               c.String("rpc_token"),
 			APIToken:               c.String("api_token"),
 			UseLocalDashboard:      c.Bool("use_local_dashboard"),
+			AllowFiles:             utils.StringArrayUnique(c.StringSlice("allow_files")),
 		}
 	})
 
@@ -97,6 +104,12 @@ func main() {
 	app.Provider(&queue.ServiceProvider{})
 	app.Provider(&scheduler.ServiceProvider{})
 	app.Provider(&collector.ServiceProvider{})
+
+	app.Main(func(conf *config.Config) {
+		log.WithFields(log.Fields{
+			"config": conf,
+		}).Debug("configuration")
+	})
 
 	if err := app.Run(os.Args); err != nil {
 		log.Errorf("exit: %s", err)

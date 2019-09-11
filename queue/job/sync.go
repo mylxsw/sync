@@ -11,6 +11,7 @@ import (
 	"github.com/mylxsw/container"
 	"github.com/mylxsw/sync/client"
 	"github.com/mylxsw/sync/collector"
+	"github.com/mylxsw/sync/config"
 	"github.com/mylxsw/sync/meta"
 	"github.com/mylxsw/sync/protocol"
 	"github.com/mylxsw/sync/queue/action"
@@ -29,6 +30,7 @@ type FileSyncJob struct {
 	CreatedAt time.Time          `json:"created_at"`
 
 	cc            *container.Container
+	conf          *config.Config
 	syncSetting   *meta.GlobalFileSyncSetting
 	actionFactory action.Factory
 }
@@ -43,8 +45,9 @@ func NewFileSyncJob(group meta.FileSyncGroup) *FileSyncJob {
 	}
 }
 
-func (job *FileSyncJob) Init(settingFactory storage.SettingFactory, actionFactory action.Factory) {
+func (job *FileSyncJob) Init(settingFactory storage.SettingFactory, actionFactory action.Factory, conf *config.Config) {
 	job.actionFactory = actionFactory
+	job.conf = conf
 	syncSettingData, err := settingFactory.Namespace(storage.GlobalNamespace).Get(storage.SyncActionSetting)
 	if err != nil {
 		if err != storage.ErrNoSuchSetting {
@@ -126,6 +129,14 @@ func (job *FileSyncJob) Handle(ctx context.Context, rpcFactory rpc.Factory, col 
 }
 
 func (job *FileSyncJob) handle(ctx context.Context, rpcFactory rpc.Factory, col *collector.Collector) error {
+	// security check
+	checkStage := col.Stage("security-check")
+	for _, f := range job.Payload.Files {
+		if !job.conf.Allow(f.Dest) {
+			return checkStage.Errorf("security: dest not allowed to sync: %s", f.Dest)
+		}
+	}
+
 	syncClient, err := rpcFactory.SyncClient(job.RemoteServer(), job.RemoteServerToken())
 	if err != nil {
 		return errors.Wrap(err, "create sync rpc client failed")
@@ -172,8 +183,7 @@ func (job *FileSyncJob) fileSync(units []meta.SyncUnit, col *collector.Collector
 		stageSync := col.Stage(fmt.Sprintf("sync-files-#%d", i))
 		fileNeedSyncs, err := syncClient.SyncDiff(g.Files, savePathGenerator, true)
 		if err != nil {
-			stageSync.Errorf("sync file diff failed: %s", err.Error())
-			return errors.Wrap(err, "file sync diff failed")
+			return stageSync.Errorf("sync file diff failed: %s", err.Error())
 		}
 
 		// append files need deleted to fileNeedSyncs
@@ -202,7 +212,7 @@ func (job *FileSyncJob) fileSync(units []meta.SyncUnit, col *collector.Collector
 
 		// real file sync progress
 		if err := syncClient.SyncFiles(fileNeedSyncs, stageSync); err != nil {
-			stageSync.Errorf("sync file failed: %s", err.Error())
+			_ = stageSync.Errorf("sync file failed: %s", err.Error())
 
 			if len(g.FileToSync.Error) > 0 {
 				errorStage := col.Stage(fmt.Sprintf("sync-errors-#%d", i))

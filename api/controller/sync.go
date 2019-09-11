@@ -7,6 +7,7 @@ import (
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/container"
 	"github.com/mylxsw/hades"
+	"github.com/mylxsw/sync/config"
 	"github.com/mylxsw/sync/meta"
 	"github.com/mylxsw/sync/queue"
 	"github.com/mylxsw/sync/storage"
@@ -41,7 +42,7 @@ func (s *SyncDefinitionController) Register(router *hades.Router) {
 // @Param def body []meta.FileSyncGroup true "文件同步定义"
 // @Success 200 {array} meta.FileSyncGroup
 // @Router /sync/ [post]
-func (s *SyncDefinitionController) UpdateDefinitions(ctx *hades.WebContext, req *hades.HttpRequest, defStore storage.DefinitionStore) hades.HTTPResponse {
+func (s *SyncDefinitionController) UpdateDefinitions(ctx *hades.WebContext, req *hades.HttpRequest, defStore storage.DefinitionStore, conf *config.Config) hades.HTTPResponse {
 	var syncGroupDefs []meta.FileSyncGroup
 	if req.ContentType() == "application/yaml" {
 		if err := req.UnmarshalYAML(&syncGroupDefs); err != nil {
@@ -50,6 +51,14 @@ func (s *SyncDefinitionController) UpdateDefinitions(ctx *hades.WebContext, req 
 	} else {
 		if err := req.Unmarshal(&syncGroupDefs); err != nil {
 			return ctx.JSONError(fmt.Sprintf("parse definition failed: %s", err), http.StatusUnprocessableEntity)
+		}
+	}
+
+	for _, def := range syncGroupDefs {
+		for _, f := range def.Files {
+			if !conf.Allow(f.Dest) {
+				return ctx.JSONError(fmt.Sprintf("security: dest for %s not allowed to sync: %s", def.Name, f.Dest), http.StatusUnprocessableEntity)
+			}
 		}
 	}
 

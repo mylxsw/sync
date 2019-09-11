@@ -4,7 +4,7 @@ DIR := $(shell pwd)
 LDFLAGS := "-s -w -X main.Version=$(Version) -X main.GitCommit=$(GitCommit)"
 
 run: static-gen doc-gen build
-	./bin/sync --use_local_dashboard
+	./bin/sync --use_local_dashboard --allow_files=/tmp --allow_files=/usr/lib/systemd/system --allow_files=/etc/nginx --allow_files=/data
 
 run-dashboard:
 	cd dashboard && npm run serve

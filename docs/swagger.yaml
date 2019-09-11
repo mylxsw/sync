@@ -68,6 +68,29 @@ definitions:
       timestamp:
         type: string
     type: object
+  config.Config:
+    properties:
+      allowFiles:
+        items:
+          type: string
+        type: array
+      apitoken:
+        type: string
+      db:
+        type: string
+      fileSyncWorkerNum:
+        type: integer
+      fileTransferBufferSize:
+        type: integer
+      jobHistoryKeepSize:
+        type: integer
+      rpclistenAddr:
+        type: string
+      rpctoken:
+        type: string
+      useLocalDashboard:
+        type: boolean
+    type: object
   controller.BulkDeleteReq:
     properties:
       names:
@@ -122,6 +145,9 @@ definitions:
         type: object
       cc:
         type: string
+      conf:
+        $ref: '#/definitions/config.Config'
+        type: object
       created_at:
         type: string
       id:

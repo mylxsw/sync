@@ -76,6 +76,11 @@ func (fs *fileSyncClient) SyncFiles(fileNeedSyncs meta.FileNeedSyncs, stage *col
 	files := fileNeedSyncs.All()
 	progress := stage.Progress(len(files))
 	for _, ff := range files {
+		// for security reason, not allow `/` and empty save path
+		if ff.SaveFilePath == "" || ff.SaveFilePath == "/" {
+			return fmt.Errorf("security: sync path %s not allowed", ff.SaveFilePath)
+		}
+
 		if ff.SyncFile {
 			switch ff.Type {
 			case protocol.Type_Normal:

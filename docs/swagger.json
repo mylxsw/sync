@@ -551,6 +551,41 @@
                 }
             }
         },
+        "config.Config": {
+            "type": "object",
+            "properties": {
+                "allowFiles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "apitoken": {
+                    "type": "string"
+                },
+                "db": {
+                    "type": "string"
+                },
+                "fileSyncWorkerNum": {
+                    "type": "integer"
+                },
+                "fileTransferBufferSize": {
+                    "type": "integer"
+                },
+                "jobHistoryKeepSize": {
+                    "type": "integer"
+                },
+                "rpclistenAddr": {
+                    "type": "string"
+                },
+                "rpctoken": {
+                    "type": "string"
+                },
+                "useLocalDashboard": {
+                    "type": "boolean"
+                }
+            }
+        },
         "controller.BulkDeleteReq": {
             "type": "object",
             "properties": {
@@ -632,6 +667,10 @@
                 },
                 "cc": {
                     "type": "string"
+                },
+                "conf": {
+                    "type": "object",
+                    "$ref": "#/definitions/config.Config"
                 },
                 "created_at": {
                     "type": "string"

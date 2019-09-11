@@ -170,6 +170,7 @@
                         title: 'ERROR',
                         variant: 'danger'
                     });
+                    this.refreshPage();
                 });
             },
             /**
