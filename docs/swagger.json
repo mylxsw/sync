@@ -448,6 +448,9 @@
         }
     },
     "definitions": {
+        "action.Factory": {
+            "type": "object"
+        },
         "collector.Collector": {
             "type": "object",
             "properties": {
@@ -623,6 +626,10 @@
         "job.FileSyncJob": {
             "type": "object",
             "properties": {
+                "actionFactory": {
+                    "type": "object",
+                    "$ref": "#/definitions/action.Factory"
+                },
                 "cc": {
                     "type": "string"
                 },

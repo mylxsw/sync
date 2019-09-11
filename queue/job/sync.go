@@ -13,6 +13,7 @@ import (
 	"github.com/mylxsw/sync/collector"
 	"github.com/mylxsw/sync/meta"
 	"github.com/mylxsw/sync/protocol"
+	"github.com/mylxsw/sync/queue/action"
 	"github.com/mylxsw/sync/rpc"
 	"github.com/mylxsw/sync/storage"
 	"github.com/mylxsw/sync/utils"
@@ -26,8 +27,9 @@ type FileSyncJob struct {
 	Payload   meta.FileSyncGroup `json:"payload"`
 	CreatedAt time.Time          `json:"created_at"`
 
-	cc          *container.Container
-	syncSetting *meta.GlobalFileSyncSetting
+	cc            *container.Container
+	syncSetting   *meta.GlobalFileSyncSetting
+	actionFactory action.Factory
 }
 
 // NewFileSyncJob create a FileSyncJob
@@ -40,7 +42,8 @@ func NewFileSyncJob(group meta.FileSyncGroup) *FileSyncJob {
 	}
 }
 
-func (job *FileSyncJob) Init(settingFactory storage.SettingFactory) {
+func (job *FileSyncJob) Init(settingFactory storage.SettingFactory, actionFactory action.Factory) {
+	job.actionFactory = actionFactory
 	syncSettingData, err := settingFactory.Namespace(storage.GlobalNamespace).Get(storage.SyncActionSetting)
 	if err != nil {
 		if err != storage.ErrNoSuchSetting {
@@ -103,10 +106,10 @@ func (job *FileSyncJob) Handle(ctx context.Context, rpcFactory rpc.Factory, col 
 		errActions := job.ErrorActions()
 		if len(errActions) > 0 {
 			stage := col.Stage("errors")
-			matchData := meta.NewSyncMatchData(job.ID, job.Payload, []meta.SyncUnit{}, meta.FileNeedSyncs{}, err)
-			for _, act := range errActions {
-				if act.Matched(matchData) {
-					if err := act.Execute(matchData, stage); err != nil {
+			matchData := action.NewSyncMatchData(job.ID, job.Payload, []meta.SyncUnit{}, meta.FileNeedSyncs{}, err)
+			for _, ac := range errActions {
+				if act := job.actionFactory.Action(&ac, matchData); act != nil {
+					if err := act.Execute(stage); err != nil {
 						log.WithFields(log.Fields{
 							"act": act,
 						}).Errorf("execute error stage failed: %s", err)
@@ -166,8 +169,9 @@ func (job *FileSyncJob) fileSync(units []meta.SyncUnit, col *collector.Collector
 		// file sync before
 		stageSyncBefore := col.Stage(fmt.Sprintf("sync-before-#%d", i))
 		for j, before := range g.FileToSync.Before {
-			if before.Matched(meta.NewSyncMatchData(job.ID, job.Payload, []meta.SyncUnit{g}, fileNeedSyncs, nil)) {
-				if err := before.Execute(meta.NewSyncMatchData(job.ID, job.Payload, []meta.SyncUnit{g}, fileNeedSyncs, nil), stageSyncBefore); err != nil {
+			matchData := action.NewSyncMatchData(job.ID, job.Payload, []meta.SyncUnit{g}, fileNeedSyncs, nil)
+			if beforeAct := job.actionFactory.Action(&before, matchData); beforeAct != nil {
+				if err := beforeAct.Execute(stageSyncBefore); err != nil {
 					stageSyncBefore.Error(fmt.Sprintf("#%d matched, but execute failed: %s", j, err))
 					return errors.Wrap(err, "execute before stage failed")
 				}
@@ -182,10 +186,10 @@ func (job *FileSyncJob) fileSync(units []meta.SyncUnit, col *collector.Collector
 
 			if len(g.FileToSync.Error) > 0 {
 				errorStage := col.Stage(fmt.Sprintf("sync-errors-#%d", i))
-				matchData := meta.NewSyncMatchData(job.ID, job.Payload, []meta.SyncUnit{}, fileNeedSyncs, err)
-				for _, act := range g.FileToSync.Error {
-					if act.Matched(matchData) {
-						if err := act.Execute(matchData, errorStage); err != nil {
+				matchData := action.NewSyncMatchData(job.ID, job.Payload, []meta.SyncUnit{}, fileNeedSyncs, err)
+				for _, ac := range g.FileToSync.Error {
+					if act := job.actionFactory.Action(&ac, matchData); act != nil {
+						if err := act.Execute(errorStage); err != nil {
 							log.WithFields(log.Fields{
 								"act": act,
 							}).Errorf("execute error stage for %d failed: %s", i, err)
@@ -204,8 +208,9 @@ func (job *FileSyncJob) fileSync(units []meta.SyncUnit, col *collector.Collector
 		// file sync after
 		stageSyncAfter := col.Stage(fmt.Sprintf("sync-after-#%d", i))
 		for j, after := range g.FileToSync.After {
-			if after.Matched(meta.NewSyncMatchData(job.ID, job.Payload, []meta.SyncUnit{g}, fileNeedSyncs, nil)) {
-				if err := after.Execute(meta.NewSyncMatchData(job.ID, job.Payload, []meta.SyncUnit{g}, fileNeedSyncs, nil), stageSyncAfter); err != nil {
+			matchData := action.NewSyncMatchData(job.ID, job.Payload, []meta.SyncUnit{g}, fileNeedSyncs, nil)
+			if act := job.actionFactory.Action(&after, matchData); act != nil {
+				if err := act.Execute(stageSyncAfter); err != nil {
 					stageSyncAfter.Error(fmt.Sprintf("#%d matched, but execute failed: %s", j, err))
 					return errors.Wrap(err, "execute after stage failed")
 				}
@@ -221,8 +226,9 @@ func (job *FileSyncJob) fileSync(units []meta.SyncUnit, col *collector.Collector
 func (job *FileSyncJob) groupAfter(col *collector.Collector, units []meta.SyncUnit) error {
 	stageGroupAfter := col.Stage("group-after")
 	for i, after := range job.AfterActions() {
-		if after.Matched(meta.NewSyncMatchData(job.ID, job.Payload, units, meta.FileNeedSyncs{}, nil)) {
-			if err := after.Execute(meta.NewSyncMatchData(job.ID, job.Payload, units, meta.FileNeedSyncs{}, nil), stageGroupAfter); err != nil {
+		matchData := action.NewSyncMatchData(job.ID, job.Payload, units, meta.FileNeedSyncs{}, nil)
+		if act := job.actionFactory.Action(&after, matchData); act != nil {
+			if err := act.Execute(stageGroupAfter); err != nil {
 				stageGroupAfter.Error(fmt.Sprintf("#%d matched, but execute failed: %s", i, err))
 				return errors.Wrap(err, "execute Payload before stage failed")
 			}
@@ -237,8 +243,9 @@ func (job *FileSyncJob) groupAfter(col *collector.Collector, units []meta.SyncUn
 func (job *FileSyncJob) groupBefore(col *collector.Collector, units []meta.SyncUnit) error {
 	stageGroupBefore := col.Stage("group-before")
 	for i, before := range job.BeforeActions() {
-		if before.Matched(meta.NewSyncMatchData(job.ID, job.Payload, units, meta.FileNeedSyncs{}, nil)) {
-			if err := before.Execute(meta.NewSyncMatchData(job.ID, job.Payload, units, meta.FileNeedSyncs{}, nil), stageGroupBefore); err != nil {
+		matchData := action.NewSyncMatchData(job.ID, job.Payload, units, meta.FileNeedSyncs{}, nil)
+		if act := job.actionFactory.Action(&before, matchData); act != nil {
+			if err := act.Execute(stageGroupBefore); err != nil {
 				stageGroupBefore.Error(fmt.Sprintf("#%d matched, but execute failed: %s", i, err))
 				return errors.Wrap(err, "execute Payload before stage failed")
 			}

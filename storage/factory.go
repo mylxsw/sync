@@ -4,6 +4,11 @@ import (
 	"github.com/siddontang/ledisdb/ledis"
 )
 
+const (
+	QueueDingding = "dingding"
+	QueueFileSync = "file-sync"
+)
+
 // QueueStoreFactory 队列工厂接口
 type QueueStoreFactory interface {
 	// QueueStore 获取队列实例

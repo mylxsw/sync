@@ -174,7 +174,7 @@ func (s *JobController) Sync(ctx *hades.WebContext, req *hades.HttpRequest, sync
 // @Success 200 {array} job.FileSyncJob
 // @Router /jobs/ [get]
 func (s *JobController) Jobs(ctx *hades.WebContext, req *hades.HttpRequest, queueStoreFactory storage.QueueStoreFactory) hades.HTTPResponse {
-	qs := queueStoreFactory.Queue("file-sync")
+	qs := queueStoreFactory.Queue(storage.QueueFileSync)
 	jobsRaw, err := qs.All()
 	if err != nil {
 		return ctx.JSONError(err.Error(), http.StatusInternalServerError)

@@ -8,6 +8,7 @@ import (
 	"github.com/mylxsw/container"
 	"github.com/mylxsw/glacier"
 	"github.com/mylxsw/sync/config"
+	"github.com/mylxsw/sync/queue/action"
 	"github.com/mylxsw/sync/storage"
 )
 
@@ -15,8 +16,9 @@ type ServiceProvider struct{}
 
 func (s *ServiceProvider) Register(app *container.Container) {
 	app.MustSingleton(func(cc *container.Container, factory storage.QueueStoreFactory, failedJobStore storage.FailedJobStore) SyncQueue {
-		return NewSyncQueue(cc, factory.Queue("file-sync"), failedJobStore)
+		return NewSyncQueue(cc, factory.Queue(storage.QueueFileSync), failedJobStore)
 	})
+	app.MustSingleton(action.NewActionFactory)
 }
 
 func (s *ServiceProvider) Boot(app *glacier.Glacier) {
