@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package protocol;
+
+message WatchRequest {
+    repeated string names = 1;
+}
+
+message WatchFile {
+    string name = 1;
+    string lastStatus = 2;
+    string lastSyncAt = 3;
+}
+
+message WatchResponse {
+    repeated WatchFile files = 1;
+}

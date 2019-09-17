@@ -31,6 +31,8 @@ type FileSyncClient interface {
 	SyncDiff(files []*protocol.File, savePath func(f *protocol.File) string, syncOwner bool) (meta.FileNeedSyncs, error)
 	// SyncFiles 同步文件
 	SyncFiles(fileNeedSyncs meta.FileNeedSyncs, stage *collector.Stage) error
+	// Watch 检查上游是否有变更
+	Watch(names []string) ([]*protocol.WatchFile, error)
 }
 
 // fileSyncClient 文件同步客户端
@@ -121,7 +123,7 @@ func (fs *fileSyncClient) SyncFiles(fileNeedSyncs meta.FileNeedSyncs, stage *col
 
 		if ff.Delete {
 			if err := os.RemoveAll(ff.SaveFilePath); err != nil {
-				stage.Errorf("rm -fr %s failed: %s", ff.SaveFilePath, err)
+				_ = stage.Errorf("rm -fr %s failed: %s", ff.SaveFilePath, err)
 			} else {
 				stage.Infof("rm -fr %s", ff.SaveFilePath)
 			}
@@ -460,4 +462,13 @@ func (fs *fileSyncClient) writeFile(downloadResp protocol.SyncService_SyncFileCl
 
 	log.Debugf("write file %s, mode=%s, size=%s OK", savedFilePath, os.FileMode(f.Mode), humanize.Bytes(uint64(total)))
 	return nil
+}
+
+func (fs *fileSyncClient) Watch(names []string) ([]*protocol.WatchFile, error) {
+	resp, err := fs.client.Watch(context.TODO(), &protocol.WatchRequest{Names: names,})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Files, err
 }

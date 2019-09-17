@@ -213,7 +213,7 @@ var _escData = map[string]*_escFile{
 		name:    "app.f93d62c2.css",
 		local:   "dashboard/dist/css/app.f93d62c2.css",
 		size:    137,
-		modtime: 1568195529,
+		modtime: 1568630727,
 		compressed: `
 H4sIAAAAAAAC/zyMQQrCMBBFr+IBOiVduMnWvXcYOxMdaGZCTE0k5O4ilG4+n8fjzatpQVHOELZdqCck
 En16N+aIovARridcrqmNOZraO+HKBMG09P9AwCjb199sz8L5cuc6HX86/SP5sNYjNqhC5eUX51xq4xcA
@@ -225,7 +225,7 @@ AP//0BsO34kAAAA=
 		name:    "chunk-vendors.d4a30ca6.css",
 		local:   "dashboard/dist/css/chunk-vendors.d4a30ca6.css",
 		size:    228155,
-		modtime: 1568195529,
+		modtime: 1568630727,
 		compressed: `
 H4sIAAAAAAAC/+y9a4/jOJIo+n1/hbYaha6cllySbNlOG93Y3cEszgLd82H7nItz0acWkC3a1pReR5Ir
 lW14fvuF+JD4CFKS05lVvXd2Fl1pMRgRDAaDEXwEP/7pn//J+pP1b3leV3UZFtaXxWw+86wPp7ouqs3H
@@ -741,7 +741,7 @@ ESxw5cC0VLdz9Z8AAAD//1APcFI7ewMA
 		name:    "favicon.ico",
 		local:   "dashboard/dist/favicon.ico",
 		size:    4286,
-		modtime: 1568195529,
+		modtime: 1568630727,
 		compressed: `
 H4sIAAAAAAAC/9xXTUhjVxQ+qYgtEhVKu2gXZumqXbQvMbZpcqDQxGixrSBIzUtsa6ukpQraHypJe63L
 Qi10YV0VkS5Ki6WlV1eOizCCK5du1MW4chFQmCAhdzgvJzMv793nqBMjzIMPb87P951z7vXlBsAHPggE
@@ -766,7 +766,7 @@ WtWeSk6pcrSKUncVxU6lDtuq2GqpIu9TitIAVAUgRygDRAklgO4iQCfhEKCNsAXQQsj78j7w5fnTluUl
 		name:    "index.html",
 		local:   "dashboard/dist/index.html",
 		size:    848,
-		modtime: 1568195529,
+		modtime: 1568630727,
 		compressed: `
 H4sIAAAAAAAC/4yTwW7bMAyGX4XLpZfZapMuawFJwND2sF1WYBu2HWmJidQokibRDvL2Q+10bbNhyMUA
 6f8jf5O0fHP7+ebrz/s7cLwNWj4+IWBcK4paOkKr5ZYYwTgslVj1vGquDjnHnBv61ftB/Wi+fWhu0jYj
@@ -782,7 +782,7 @@ yiXFtf5OZ4WgplL20PUM9mknYBPVeMawS2UDuaRMJexh59mlnuETDvhlLAUUsQtkW7gPhJUOMXgGTuPh
 		name:    "app.d5ac34d7.js",
 		local:   "dashboard/dist/js/app.d5ac34d7.js",
 		size:    31823,
-		modtime: 1568195529,
+		modtime: 1568630727,
 		compressed: `
 H4sIAAAAAAAC/+R93XbctrLm/TwFje1RyAhN9f8PdXi8nNjbcbZ/si377JMja2mBJNhNi030JtCSFbnf
 YO7mdi7mQeZqHmVeYF5hFoACSHazJXnHcbLnZMV24yN+ClWFqkIBzXbTdRGLjBWu8G7MZ4e61LtJWele
@@ -931,7 +931,7 @@ q/8XAAD//5nMtiRPfAAA
 		name:    "app.d5ac34d7.js.map",
 		local:   "dashboard/dist/js/app.d5ac34d7.js.map",
 		size:    117931,
-		modtime: 1568195529,
+		modtime: 1568630727,
 		compressed: `
 H4sIAAAAAAAC/+y92XrbuPI4+Co8Ovm37I4277bSzjkULa+xHcd23D5Rjz+KhCRaFEmTlGQl7TeYu7md
 i3mQuZpHmReYV5gPhZ2LFmfp9Pk53xeTQmEpFAqFqkIB/FIYoTByfK9QXysVIn8YWigq1D8VxqgdmFa/
@@ -1322,7 +1322,7 @@ h6GFPvh+XKgXCk//fwAAAP//y6jV8avMAQA=
 		name:    "chunk-vendors.c6921082.js",
 		local:   "dashboard/dist/js/chunk-vendors.c6921082.js",
 		size:    800086,
-		modtime: 1568195529,
+		modtime: 1568630727,
 		compressed: `
 H4sIAAAAAAAC/9T9+3cbx5Ugjv8rYJ8JpjsstgCSoqSm2hjFktfOCJa+liaZHBjTp4AuAC02upHualIw
 gT2WaMsav5LM+iHHjmNFseVHHEsWmdCyLZ+zlH8Hxr+Q8S/UfDfesxvP//A5t6r6hZeojLU7ew6JrrpV
@@ -5204,7 +5204,7 @@ XIj/kqv6hyb7KR3vRw5LNIrk67Hbk0bB8KPxeruPRdff/Tfb2/+2ksSpGLA9OptFfPT+ew/IYJzy/foB
 		name:    "chunk-vendors.c6921082.js.map",
 		local:   "dashboard/dist/js/chunk-vendors.c6921082.js.map",
 		size:    3083144,
-		modtime: 1568195529,
+		modtime: 1568630727,
 		compressed: `
 H4sIAAAAAAAC/7S923IjOZYg+C8yPeyaBTM7s3qqq/uNpKgIdkoim2QoMmdszQ10B0mk3B2eAJyUYn9m
 b9Mzs7d6qK/Zt/mUNZwLACepCJFUPUjEzY8D8IODc8PB/3y1lcYqXV/9y58+XFndmlzaq3/5T1c7uWxE

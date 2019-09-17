@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"strings"
+	"time"
 )
 
 type Config struct {
@@ -15,6 +16,7 @@ type Config struct {
 	JobHistoryKeepSize     int64
 	UseLocalDashboard      bool
 	AllowFiles             []string
+	CommandTimeout         time.Duration
 }
 
 func (conf *Config) Serialize() string {

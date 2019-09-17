@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/mylxsw/asteria/formatter"
 	"github.com/mylxsw/asteria/log"
@@ -92,6 +93,7 @@ func main() {
 			APIToken:               c.String("api_token"),
 			UseLocalDashboard:      c.Bool("use_local_dashboard"),
 			AllowFiles:             utils.StringArrayUnique(c.StringSlice("allow_files")),
+			CommandTimeout:         60 * time.Second,
 		}
 	})
 

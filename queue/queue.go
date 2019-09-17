@@ -19,6 +19,8 @@ import (
 type SyncQueue interface {
 	// Enqueue 添加任务到队列
 	Enqueue(jobs ...job.FileSyncJob) error
+	// EnqueueOneByDef 根据定义名称添加任务到队列
+	EnqueueOneByDef(def string) (*job.FileSyncJob, error)
 	// Worker 执行任务队列消费
 	Worker(ctx context.Context)
 	// RunningJobs 获取运行中的任务
@@ -29,6 +31,7 @@ type syncQueue struct {
 	queue       storage.QueueStore
 	failedStore storage.FailedJobStore
 	statusStore storage.JobStatusStore
+	defStore    storage.DefinitionStore
 	cc          *container.Container
 
 	lock        sync.RWMutex
@@ -39,8 +42,9 @@ type syncQueue struct {
 func NewSyncQueue(cc *container.Container, queue storage.QueueStore, failedStore storage.FailedJobStore) SyncQueue {
 	sq := syncQueue{queue: queue, failedStore: failedStore, cc: cc, runningJobs: make(map[string]*storage.JobHistoryItem)}
 
-	cc.MustResolve(func(statusStore storage.JobStatusStore) {
+	cc.MustResolve(func(statusStore storage.JobStatusStore, defStore storage.DefinitionStore) {
 		sq.statusStore = statusStore
+		sq.defStore = defStore
 	})
 
 	return &sq
@@ -137,7 +141,7 @@ func (sq *syncQueue) syncJob() {
 	}).Debugf("processing job %s [%s]", j.Name, j.ID)
 
 	// 更新任务状态
-	if err := sq.statusStore.Update(j.ID, storage.JobStatusRunning); err != nil {
+	if err := sq.statusStore.Update(j.ID, j.Payload.Name, storage.JobStatusRunning); err != nil {
 		log.WithFields(log.Fields{
 			"job":    j,
 			"status": storage.JobStatusRunning,
@@ -193,7 +197,7 @@ func (sq *syncQueue) syncJob() {
 			jobStatus = storage.JobStatusFailed
 		}
 
-		if err := sq.statusStore.Update(j.ID, jobStatus); err != nil {
+		if err := sq.statusStore.Update(j.ID, j.Payload.Name, jobStatus); err != nil {
 			log.WithFields(log.Fields{
 				"job":    j,
 				"status": jobStatus,
@@ -228,4 +232,25 @@ func (sq *syncQueue) RunningJobs() []storage.JobHistoryItem {
 	}
 
 	return items
+}
+
+func (sq *syncQueue) EnqueueOneByDef(def string) (*job.FileSyncJob, error) {
+	definition, err := sq.defStore.Get(def)
+	if err != nil {
+		return nil, err
+	}
+
+	// create file sync job and push to queue
+	j := job.NewFileSyncJob(*definition)
+
+	// 记录 job 状态，用于异步查询任务执行状态
+	if err := sq.statusStore.Update(j.ID, j.Payload.Name, storage.JobStatusPending); err != nil {
+		log.Errorf("record job status failed: %s", err)
+	}
+
+	if err := sq.Enqueue(*j); err != nil {
+		return nil, err
+	}
+
+	return j, nil
 }

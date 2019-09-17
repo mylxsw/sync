@@ -25,25 +25,25 @@ func NewJobController(cc *container.Container) Controller {
 	return &JobController{cc: cc}
 }
 
-func (j *JobController) Register(router *hades.Router) {
+func (s *JobController) Register(router *hades.Router) {
 	router.Group("/jobs", func(router *hades.Router) {
-		router.Post("/", j.Sync)
-		router.Get("/", j.Jobs)
-		router.Get("/{id}/", j.Status)
+		router.Post("/", s.Sync)
+		router.Get("/", s.Jobs)
+		router.Get("/{id}/", s.Status)
 	})
 
 	router.Group("/jobs-bulk/", func(router *hades.Router) {
-		router.Post("/", j.BulkSync)
+		router.Post("/", s.BulkSync)
 	})
 
 	router.Group("/failed-jobs", func(router *hades.Router) {
-		router.Get("/", j.FailedJobs)
-		router.Put("/{id}/", j.RetryJob)
-		router.Delete("/{id}/", j.DeleteFailedJob)
+		router.Get("/", s.FailedJobs)
+		router.Put("/{id}/", s.RetryJob)
+		router.Delete("/{id}/", s.DeleteFailedJob)
 	})
 
 	router.Group("/running-jobs", func(router *hades.Router) {
-		router.Any("/{id}/", j.RunningJob)
+		router.Any("/{id}/", s.RunningJob)
 	})
 }
 
@@ -100,16 +100,9 @@ func (s *JobController) BulkSync(ctx *hades.WebContext, syncQueue queue.SyncQueu
 
 	jobStatuses := make([]JobStatus, 0)
 	for _, df := range definitions {
-		j := job.NewFileSyncJob(*df)
-
-		// 记录 job 状态，用于异步查询任务执行状态
-		if err := statusStore.Update(j.ID, storage.JobStatusPending); err != nil {
-			log.Errorf("record job status failed: %s", err)
-		}
-
-		if err := syncQueue.Enqueue(*j); err != nil {
+		j, err := syncQueue.EnqueueOneByDef(df.Name)
+		if err != nil {
 			jobStatuses = append(jobStatuses, JobStatus{
-				ID:             j.ID,
 				DefinitionName: df.Name,
 				Status:         string(storage.JobStatusFailed),
 			})
@@ -140,7 +133,7 @@ func (s *JobController) Sync(ctx *hades.WebContext, req *hades.HttpRequest, sync
 		return ctx.JSONError("invalid def argument", http.StatusUnprocessableEntity)
 	}
 
-	definition, err := defStore.Get(def)
+	j, err := syncQueue.EnqueueOneByDef(def)
 	if err != nil {
 		if err == storage.ErrNoSuchDefinition {
 			return ctx.JSONError(err.Error(), http.StatusNotFound)
@@ -149,21 +142,9 @@ func (s *JobController) Sync(ctx *hades.WebContext, req *hades.HttpRequest, sync
 		return ctx.JSONError(err.Error(), http.StatusInternalServerError)
 	}
 
-	// create file sync job and push to queue
-	j := job.NewFileSyncJob(*definition)
-
-	// 记录 job 状态，用于异步查询任务执行状态
-	if err := statusStore.Update(j.ID, storage.JobStatusPending); err != nil {
-		log.Errorf("record job status failed: %s", err)
-	}
-
-	if err := syncQueue.Enqueue(*j); err != nil {
-		return ctx.JSONError(err.Error(), http.StatusInternalServerError)
-	}
-
 	return ctx.JSON(JobStatus{
 		ID:             j.ID,
-		DefinitionName: definition.Name,
+		DefinitionName: j.Payload.Name,
 		Status:         string(storage.JobStatusPending),
 	})
 }

@@ -9,8 +9,8 @@ import (
 var ErrNoSuchSetting = errors.New("no such setting")
 
 const (
-	GlobalNamespace   = "global"
-	SyncActionSetting = "sync-action"
+	GlobalNamespace    = "global"
+	SyncActionSetting  = "sync-action"
 )
 
 // SettingFactory is a factory for creating settingStore

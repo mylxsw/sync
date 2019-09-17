@@ -51,18 +51,20 @@ func (fsg *FileSyncGroup) Decode(data []byte) error {
 
 // GlobalFileSyncSetting global file sync settings
 type GlobalFileSyncSetting struct {
-	From   string       `json:"from,omitempty" yaml:"from,omitempty"`
-	Token  string       `json:"token,omitempty" yaml:"token,omitempty"`
-	Before []SyncAction `json:"before,omitempty" yaml:"before,omitempty"`
-	After  []SyncAction `json:"after,omitempty" yaml:"after,omitempty"`
-	Errors []SyncAction `json:"errors,omitempty" yaml:"errors,omitempty"`
+	From    string       `json:"from,omitempty" yaml:"from,omitempty"`
+	Token   string       `json:"token,omitempty" yaml:"token,omitempty"`
+	Before  []SyncAction `json:"before,omitempty" yaml:"before,omitempty"`
+	After   []SyncAction `json:"after,omitempty" yaml:"after,omitempty"`
+	Errors  []SyncAction `json:"errors,omitempty" yaml:"errors,omitempty"`
+	Watches []SyncWatch  `json:"watches,omitempty" yaml:"watches,omitempty"`
 }
 
 func NewGlobalFileSyncSetting() *GlobalFileSyncSetting {
 	return &GlobalFileSyncSetting{
-		Before: make([]SyncAction, 0),
-		After:  make([]SyncAction, 0),
-		Errors: make([]SyncAction, 0),
+		Before:  make([]SyncAction, 0),
+		After:   make([]SyncAction, 0),
+		Errors:  make([]SyncAction, 0),
+		Watches: make([]SyncWatch, 0),
 	}
 }
 

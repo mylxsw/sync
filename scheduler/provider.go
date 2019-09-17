@@ -22,7 +22,8 @@ func (s *ServiceProvider) Boot(app *glacier.Glacier) {
 	})
 
 	app.PeriodJob(func(pj *period_job.Manager, cc *container.Container) {
-		pj.Run("dingding", NewDingdingConsumer(cc), 10 * time.Second)
+		pj.Run("dingding", NewDingdingConsumer(cc), 10*time.Second)
+		pj.Run("watcher", NewWatcher(cc), 5*time.Second)
 	})
 }
 

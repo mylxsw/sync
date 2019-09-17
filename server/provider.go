@@ -14,6 +14,7 @@ import (
 	"github.com/mylxsw/graceful"
 	"github.com/mylxsw/sync/config"
 	"github.com/mylxsw/sync/protocol"
+	"github.com/mylxsw/sync/storage"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -41,9 +42,9 @@ func (s *ServiceProvider) Register(app *container.Container) {
 }
 
 func (s *ServiceProvider) Boot(app *glacier.Glacier) {
-	app.MustResolve(func(server *grpc.Server, conf *config.Config) {
+	app.MustResolve(func(server *grpc.Server, conf *config.Config, statusStore storage.JobStatusStore) {
 		// 注册 GRPC Service
-		protocol.RegisterSyncServiceServer(server, NewSyncServer(conf.FileTransferBufferSize))
+		protocol.RegisterSyncServiceServer(server, NewSyncServer(conf.FileTransferBufferSize, statusStore))
 	})
 }
 

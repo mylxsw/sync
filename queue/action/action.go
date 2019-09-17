@@ -80,7 +80,7 @@ func (fact actionFactory) Action(syncAction *meta.SyncAction, data *SyncMatchDat
 
 	switch syncAction.Action {
 	case "command":
-		return newCommandAction(syncAction, data)
+		return newCommandAction(syncAction, data, fact.cc)
 	case "dingding":
 		return newDingdingAction(syncAction, data, fact.cc)
 	}

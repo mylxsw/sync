@@ -563,6 +563,9 @@
                 "apitoken": {
                     "type": "string"
                 },
+                "commandTimeout": {
+                    "type": "string"
+                },
                 "db": {
                     "type": "string"
                 },
@@ -802,6 +805,12 @@
                 },
                 "token": {
                     "type": "string"
+                },
+                "watches": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/meta.SyncWatch"
+                    }
                 }
             }
         },
@@ -842,10 +851,30 @@
                 "parse_template": {
                     "type": "boolean"
                 },
+                "timeout": {
+                    "type": "string"
+                },
                 "token": {
                     "type": "string"
                 },
                 "when": {
+                    "type": "string"
+                }
+            }
+        },
+        "meta.SyncWatch": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "type": "string"
+                },
+                "names": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "token": {
                     "type": "string"
                 }
             }

@@ -76,6 +76,8 @@ definitions:
         type: array
       apitoken:
         type: string
+      commandTimeout:
+        type: string
       db:
         type: string
       fileSyncWorkerNum:
@@ -235,6 +237,10 @@ definitions:
         type: string
       token:
         type: string
+      watches:
+        items:
+          $ref: '#/definitions/meta.SyncWatch'
+        type: array
     type: object
   meta.Rule:
     properties:
@@ -261,9 +267,22 @@ definitions:
         type: string
       parse_template:
         type: boolean
+      timeout:
+        type: string
       token:
         type: string
       when:
+        type: string
+    type: object
+  meta.SyncWatch:
+    properties:
+      from:
+        type: string
+      names:
+        items:
+          type: string
+        type: array
+      token:
         type: string
     type: object
 host: localhost:8819

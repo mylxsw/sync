@@ -5,9 +5,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/mylxsw/coll"
 	"github.com/mylxsw/sync/protocol"
+	"github.com/mylxsw/sync/storage"
 	"github.com/mylxsw/sync/utils"
 	"github.com/pkg/errors"
 	ignore "github.com/sabhiram/go-gitignore"
@@ -15,12 +17,28 @@ import (
 
 // SyncServer 同步服务端实现
 type SyncServer struct {
-	bufferSize int64
+	bufferSize  int64
+	statusStore storage.JobStatusStore
 }
 
 // NewSyncServer 创建一个文件同步服务
-func NewSyncServer(bufferSize int64) *SyncServer {
-	return &SyncServer{bufferSize: bufferSize}
+func NewSyncServer(bufferSize int64, statusStore storage.JobStatusStore) *SyncServer {
+	return &SyncServer{bufferSize: bufferSize, statusStore: statusStore,}
+}
+
+// Watch 检查是否同步任务有更新
+func (s *SyncServer) Watch(ctx context.Context, req *protocol.WatchRequest) (*protocol.WatchResponse, error) {
+	resp := protocol.WatchResponse{Files: make([]*protocol.WatchFile, 0),}
+	for _, name := range req.Names {
+		lastStat, lastUpdate := s.statusStore.LastStatus(name)
+		resp.Files = append(resp.Files, &protocol.WatchFile{
+			Name:       name,
+			LastStatus: string(lastStat),
+			LastSyncAt: lastUpdate.Format(time.RFC3339),
+		})
+	}
+
+	return &resp, nil
 }
 
 // Download 文件下载服务

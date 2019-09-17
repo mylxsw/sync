@@ -1,14 +1,18 @@
 package action
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	"github.com/mylxsw/asteria/log"
+	"github.com/mylxsw/container"
 	"github.com/mylxsw/go-toolkit/executor"
 	"github.com/mylxsw/sync/collector"
+	"github.com/mylxsw/sync/config"
 	"github.com/mylxsw/sync/meta"
 	"github.com/pkg/errors"
 )
@@ -16,10 +20,15 @@ import (
 type commandAction struct {
 	syncAction *meta.SyncAction
 	data       *SyncMatchData
+	timeout    time.Duration
 }
 
-func newCommandAction(syncAction *meta.SyncAction, data *SyncMatchData) Action {
-	return &commandAction{syncAction: syncAction, data: data}
+func newCommandAction(syncAction *meta.SyncAction, data *SyncMatchData, cc *container.Container) Action {
+	act := commandAction{syncAction: syncAction, data: data}
+	cc.MustResolve(func(conf *config.Config) {
+		act.timeout = conf.CommandTimeout
+	})
+	return &act
 }
 
 // workDir return the work dir for units
@@ -71,7 +80,26 @@ func (act commandAction) Execute(stage *collector.Stage) error {
 
 		return nil
 	})
-	if ok, err := cmd.Run(); !ok || err != nil {
+
+	timeout := act.timeout
+	if act.syncAction.Timeout != "" {
+		ts, err := time.ParseDuration(act.syncAction.Timeout)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"act":   act,
+				"value": act.syncAction.Timeout,
+			}).Errorf("invalid timeout value: %s", err)
+		} else {
+			if ts.Seconds() > 0 {
+				timeout = ts
+			}
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	if ok, err := cmd.Run(ctx); !ok || err != nil {
 		msg := cmd.StderrString()
 		if msg != "" {
 			stage.Error(fmt.Sprintf("command [%s] %s", commandStr, msg))
