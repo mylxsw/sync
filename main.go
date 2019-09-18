@@ -3,10 +3,14 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/mylxsw/asteria/color"
 	"github.com/mylxsw/asteria/formatter"
+	"github.com/mylxsw/asteria/level"
 	"github.com/mylxsw/asteria/log"
+	"github.com/mylxsw/asteria/writer"
 	"github.com/mylxsw/glacier"
 	"github.com/mylxsw/sync/api"
 	"github.com/mylxsw/sync/collector"
@@ -107,7 +111,18 @@ func main() {
 	app.Provider(&scheduler.ServiceProvider{})
 	app.Provider(&collector.ServiceProvider{})
 
-	app.Main(func(conf *config.Config) {
+	app.Main(func(conf *config.Config, messageFactory storage.MessageFactory) {
+		stackWriter := writer.NewStackWriter()
+		stackWriter.PushWithLevels(writer.NewStdoutWriter())
+		stackWriter.PushWithLevels(
+			NewErrorCollectorWriter(messageFactory.MessageStore(storage.MessageErrorType)),
+			level.Error,
+			level.Emergency,
+			level.Critical,
+		)
+
+		log.All().LogWriter(stackWriter)
+
 		log.WithFields(log.Fields{
 			"config": conf,
 		}).Debug("configuration")
@@ -116,4 +131,26 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		log.Errorf("exit: %s", err)
 	}
+}
+
+type ErrorCollectorWriter struct {
+	errorStore storage.MessageStore
+}
+
+func NewErrorCollectorWriter(errorStore storage.MessageStore) *ErrorCollectorWriter {
+	return &ErrorCollectorWriter{
+		errorStore: errorStore,
+	}
+}
+
+func (e *ErrorCollectorWriter) Write(le level.Level, module string, message string) error {
+	return e.errorStore.Record(strings.ReplaceAll(message, "\n", color.TextWrap(color.Green, "↙")))
+}
+
+func (e *ErrorCollectorWriter) ReOpen() error {
+	return nil
+}
+
+func (e *ErrorCollectorWriter) Close() error {
+	return nil
 }

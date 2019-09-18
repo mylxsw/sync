@@ -107,6 +107,15 @@ definitions:
           type: string
         type: array
     type: object
+  controller.DefinitionStatus:
+    properties:
+      name:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
   controller.History:
     properties:
       created_at:
@@ -235,12 +244,12 @@ definitions:
         type: array
       from:
         type: string
+      relays:
+        items:
+          $ref: '#/definitions/meta.SyncRelay'
+        type: array
       token:
         type: string
-      watches:
-        items:
-          $ref: '#/definitions/meta.SyncWatch'
-        type: array
     type: object
   meta.Rule:
     properties:
@@ -274,7 +283,7 @@ definitions:
       when:
         type: string
     type: object
-  meta.SyncWatch:
+  meta.SyncRelay:
     properties:
       from:
         type: string
@@ -306,6 +315,23 @@ paths:
           schema:
             $ref: '#/definitions/controller.WelcomeMessage'
       summary: 欢迎页面，API版本信息
+  /errors/:
+    get:
+      parameters:
+      - description: 返回最近的错误日志数目
+        in: query
+        name: limit
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+      summary: 返回最近的错误日志
+      tags:
+      - Errors
   /failed-jobs/:
     get:
       responses:
@@ -495,6 +521,18 @@ paths:
       summary: 批量删除同步定义
       tags:
       - Sync
+  /sync-stat/:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/controller.DefinitionStatus'
+            type: array
+      summary: 查询所有文件同步定义的状态
+      tags:
+      - SyncStatus
   /sync/:
     get:
       parameters:

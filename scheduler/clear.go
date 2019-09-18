@@ -13,3 +13,11 @@ func ClearJobHistory(conf *config.Config, historyStore storage.JobHistoryStore) 
 		log.Errorf("clear job history failed: %s", err)
 	}
 }
+
+// ClearErrors 清理错误日志
+func ClearErrors(conf *config.Config, msgFactory storage.MessageFactory) {
+	log.Debugf("starting job message history clear job, keep %d ...", 1000)
+	if err := msgFactory.MessageStore(storage.MessageErrorType).Keep(1000); err != nil {
+		log.Errorf("clear job message history failed: %s", err)
+	}
+}

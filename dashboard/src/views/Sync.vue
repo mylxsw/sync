@@ -17,6 +17,18 @@
                         <span class="sr-only">Not selected</span>
                     </template>
                 </template>
+                <template v-slot:cell(name)="row">
+                    <b>{{ row.item.name }}</b>
+                    <p>
+                        <b-badge v-if="row.item.lastStatus === ''">INVALID</b-badge>
+                        <b-badge v-if="row.item.lastStatus === 'pending'" variant="info">PENDING</b-badge>
+                        <b-badge v-if="row.item.lastStatus === 'ok'" variant="success">OK</b-badge>
+                        <b-badge v-if="row.item.lastStatus === 'unstable'" variant="warning">UNSTABLE</b-badge>
+                        <b-badge v-if="row.item.lastStatus === 'running'" variant="dark">RUNNING</b-badge>
+                        <b-badge v-if="row.item.lastStatus !== 'ok' && row.item.lastStatus !== 'pending' && row.item.lastStatus !== 'unstable' && row.item.lastStatus !== 'running' && row.item.lastStatus !== ''" variant="danger">FAIL</b-badge>
+                        <sub class="ml-2">{{ row.item.lastUpdatedAt }}</sub>
+                    </p>
+                </template>
                 <template v-slot:cell(files)="row">
                     <b-list-group>
                         <b-list-group-item v-for="(file, index) in row.item.files" :key="index">
@@ -79,6 +91,7 @@
 
 <script>
     import axios from 'axios';
+    import moment from 'moment';
 
     export default {
         name: 'Queue',
@@ -314,9 +327,23 @@
             refreshPage() {
                 axios.all([
                     axios.get('/api/sync/'),
-                    axios.get('/api/setting/global-sync/', {responseType: 'text', params: {format: 'json'}})
-                ]).then(axios.spread((syncResp, settingResp) => {
-                    this.definitions = syncResp.data;
+                    axios.get('/api/setting/global-sync/', {responseType: 'text', params: {format: 'json'}}),
+                    axios.get('/api/sync-stat/'),
+                ]).then(axios.spread((syncResp, settingResp, statResp) => {
+                    let definitions = syncResp.data;
+                    let status = statResp.data;
+                    for (let i in definitions) {
+                        for (let j in status) {
+                            if (definitions[i].name === status[j].name) {
+                                definitions[i].lastStatus = status[j].status;
+                                definitions[i].lastUpdatedAt = moment(status[j].updated_at).format('YYYY-MM-DD HH:mm:ss');
+                            }
+                        }
+                    }
+
+                    console.log(definitions);
+
+                    this.definitions = definitions;
                     this.isBusy = false;
 
                     this.globalSyncActions = settingResp.data;

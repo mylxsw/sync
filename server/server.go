@@ -26,12 +26,12 @@ func NewSyncServer(bufferSize int64, statusStore storage.JobStatusStore) *SyncSe
 	return &SyncServer{bufferSize: bufferSize, statusStore: statusStore,}
 }
 
-// Watch 检查是否同步任务有更新
-func (s *SyncServer) Watch(ctx context.Context, req *protocol.WatchRequest) (*protocol.WatchResponse, error) {
-	resp := protocol.WatchResponse{Files: make([]*protocol.WatchFile, 0),}
+// RelayInfo 检查是否同步任务有更新
+func (s *SyncServer) RelayInfo(ctx context.Context, req *protocol.RelayRequest) (*protocol.RelayResponse, error) {
+	resp := protocol.RelayResponse{Files: make([]*protocol.RelayFile, 0),}
 	for _, name := range req.Names {
 		lastStat, lastUpdate := s.statusStore.LastStatus(name)
-		resp.Files = append(resp.Files, &protocol.WatchFile{
+		resp.Files = append(resp.Files, &protocol.RelayFile{
 			Name:       name,
 			LastStatus: string(lastStat),
 			LastSyncAt: lastUpdate.Format(time.RFC3339),

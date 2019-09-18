@@ -31,8 +31,8 @@ type FileSyncClient interface {
 	SyncDiff(files []*protocol.File, savePath func(f *protocol.File) string, syncOwner bool) (meta.FileNeedSyncs, error)
 	// SyncFiles 同步文件
 	SyncFiles(fileNeedSyncs meta.FileNeedSyncs, stage *collector.Stage) error
-	// Watch 检查上游是否有变更
-	Watch(names []string) ([]*protocol.WatchFile, error)
+	// RelayInfo 检查上游是否有变更
+	RelayInfo(names []string) ([]*protocol.RelayFile, error)
 }
 
 // fileSyncClient 文件同步客户端
@@ -464,8 +464,8 @@ func (fs *fileSyncClient) writeFile(downloadResp protocol.SyncService_SyncFileCl
 	return nil
 }
 
-func (fs *fileSyncClient) Watch(names []string) ([]*protocol.WatchFile, error) {
-	resp, err := fs.client.Watch(context.TODO(), &protocol.WatchRequest{Names: names,})
+func (fs *fileSyncClient) RelayInfo(names []string) ([]*protocol.RelayFile, error) {
+	resp, err := fs.client.RelayInfo(context.TODO(), &protocol.RelayRequest{Names: names,})
 	if err != nil {
 		return nil, err
 	}

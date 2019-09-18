@@ -51,6 +51,7 @@ func (d *DingdingConsumer) Handle() {
 			log.WithFields(log.Fields{
 				"ding": dMessage,
 			}).Errorf("send dingding message failed: %s", err)
+			return
 		}
 
 		log.WithFields(log.Fields{

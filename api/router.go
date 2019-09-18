@@ -36,6 +36,7 @@ func routers(cc *container.Container) func(router *hades.Router, mw hades.Reques
 			controller.NewHistoryController(cc).Register(router)
 			controller.NewJobController(cc).Register(router)
 			controller.NewSettingController(cc).Register(router)
+			controller.NewErrorController(cc).Register(router)
 		}, mws...)
 	}
 }

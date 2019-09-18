@@ -30,6 +30,33 @@
                 }
             }
         },
+        "/errors/": {
+            "get": {
+                "tags": [
+                    "Errors"
+                ],
+                "summary": "返回最近的错误日志",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "返回最近的错误日志数目",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/failed-jobs/": {
             "get": {
                 "tags": [
@@ -325,6 +352,25 @@
                 }
             }
         },
+        "/sync-stat/": {
+            "get": {
+                "tags": [
+                    "SyncStatus"
+                ],
+                "summary": "查询所有文件同步定义的状态",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/controller.DefinitionStatus"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/sync/": {
             "get": {
                 "tags": [
@@ -611,6 +657,20 @@
                 }
             }
         },
+        "controller.DefinitionStatus": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "controller.History": {
             "type": "object",
             "properties": {
@@ -803,14 +863,14 @@
                 "from": {
                     "type": "string"
                 },
-                "token": {
-                    "type": "string"
-                },
-                "watches": {
+                "relays": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/meta.SyncWatch"
+                        "$ref": "#/definitions/meta.SyncRelay"
                     }
+                },
+                "token": {
+                    "type": "string"
                 }
             }
         },
@@ -862,7 +922,7 @@
                 }
             }
         },
-        "meta.SyncWatch": {
+        "meta.SyncRelay": {
             "type": "object",
             "properties": {
                 "from": {

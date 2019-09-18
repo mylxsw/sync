@@ -6,6 +6,7 @@ import FailedJob from "./views/FailedJob";
 import Sync from "./views/Sync";
 import Setting from "./views/Setting";
 import Job from "./views/Job";
+import Error from "./views/Error";
 
 Vue.use(Router);
 
@@ -17,5 +18,6 @@ export default new Router({
         {path: '/sync/definitions', component: Sync},
         {path: '/setting', component: Setting},
         {path: '/jobs/:id/', component: Job},
+        {path: '/errors/', component: Error},
     ]
 });

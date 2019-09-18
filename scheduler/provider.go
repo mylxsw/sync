@@ -18,12 +18,13 @@ func (s *ServiceProvider) Register(app *container.Container) {
 func (s *ServiceProvider) Boot(app *glacier.Glacier) {
 	app.Crontab(func(cr *cron.Cron, cc *container.Container) error {
 		misc.AssertError(cr.AddFunc("@every 3h", wrap(app, ClearJobHistory)))
+		misc.AssertError(cr.AddFunc("@every 6h", wrap(app, ClearErrors)))
 		return nil
 	})
 
 	app.PeriodJob(func(pj *period_job.Manager, cc *container.Container) {
 		pj.Run("dingding", NewDingdingConsumer(cc), 10*time.Second)
-		pj.Run("watcher", NewWatcher(cc), 5*time.Second)
+		pj.Run("relay", NewSyncRelay(cc), 5*time.Second)
 	})
 }
 

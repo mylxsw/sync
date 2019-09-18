@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/container"
@@ -31,6 +32,10 @@ func (s *SyncDefinitionController) Register(router *hades.Router) {
 
 	router.Group("/sync-bulk/", func(router *hades.Router) {
 		router.Delete("/", s.BulkDelete)
+	})
+
+	router.Group("/sync-stat/", func(router *hades.Router) {
+		router.Get("/", s.AllDefinitionStatus)
 	})
 }
 
@@ -181,4 +186,34 @@ func (s *SyncDefinitionController) AllDefinitions(ctx *hades.WebContext, req *ha
 	} else {
 		return ctx.YAML(defs)
 	}
+}
+
+type DefinitionStatus struct {
+	Name      string    `json:"name"`
+	Status    string    `json:"status"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// AllDefinitionStatus return all definition's status
+// @Summary 查询所有文件同步定义的状态
+// @Tags SyncStatus
+// @Success 200 {array} controller.DefinitionStatus
+// @Router /sync-stat/ [get]
+func (s *SyncDefinitionController) AllDefinitionStatus(ctx *hades.WebContext, defStore storage.DefinitionStore, statusStore storage.JobStatusStore) hades.HTTPResponse {
+	defs, err := defStore.All()
+	if err != nil {
+		return ctx.JSONError(err.Error(), http.StatusInternalServerError)
+	}
+
+	var definitionStatuses = make([]DefinitionStatus, 0)
+	for _, df := range defs {
+		stat, lastUpdate := statusStore.LastStatus(df.Name)
+		definitionStatuses = append(definitionStatuses, DefinitionStatus{
+			Name:      df.Name,
+			Status:    string(stat),
+			UpdatedAt: lastUpdate,
+		})
+	}
+
+	return ctx.JSON(definitionStatuses)
 }

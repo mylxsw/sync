@@ -4,12 +4,13 @@ package protocol;
 
 import "protocol/download.proto";
 import "protocol/sync.proto";
-import "protocol/watch.proto";
+import "protocol/relay.proto";
 
 service SyncService {
     rpc SyncFile (DownloadRequest) returns (stream DownloadResponse) {
     }
     rpc SyncMeta (SyncRequest) returns (SyncResponse) {
     }
-    rpc Watch(WatchRequest) returns (WatchResponse) {}
+    rpc RelayInfo (RelayRequest) returns (RelayResponse) {
+    }
 }

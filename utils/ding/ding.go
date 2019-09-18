@@ -109,10 +109,9 @@ func (ding *Dingding) Send(msg Message) error {
 		return fmt.Errorf("dingding read response failed: %s", err.Error())
 	}
 
-	log.Infof("发送完成，响应内容： %s", string(respBytes))
-
 	var dresp dingResponse
 	if err := json.Unmarshal(respBytes, &dresp); err != nil {
+		log.Errorf("发送完成，响应内容： %s", string(respBytes))
 		return err
 	}
 

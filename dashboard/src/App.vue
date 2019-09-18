@@ -9,6 +9,7 @@
                         <b-nav-item to="/queue" exact>Queue</b-nav-item>
                         <b-nav-item to="/sync/definitions" exact>Sync</b-nav-item>
                         <b-nav-item to="/failed-job">Failed Job</b-nav-item>
+                        <b-nav-item to="/errors">Error</b-nav-item>
                         <b-nav-item to="/setting">Setting</b-nav-item>
                     </b-navbar-nav>
                     <ul class="navbar-nav flex-row ml-md-auto d-none d-md-flex">

@@ -11,7 +11,7 @@ import (
 	"github.com/mylxsw/sync/storage"
 )
 
-type Watcher struct {
+type SyncRelay struct {
 	cc *container.Container
 
 	clientFactory rpc.Factory
@@ -20,8 +20,8 @@ type Watcher struct {
 	syncQueue     queue.SyncQueue
 }
 
-func NewWatcher(cc *container.Container) *Watcher {
-	watcher := Watcher{cc: cc}
+func NewSyncRelay(cc *container.Container) *SyncRelay {
+	watcher := SyncRelay{cc: cc}
 	cc.MustResolve(func(cf rpc.Factory, factory storage.SettingFactory, statusStore storage.JobStatusStore, syncQueue queue.SyncQueue) {
 		watcher.clientFactory = cf
 		watcher.settingStore = factory.Namespace(storage.GlobalNamespace)
@@ -31,7 +31,7 @@ func NewWatcher(cc *container.Container) *Watcher {
 	return &watcher
 }
 
-func (watcher *Watcher) Handle() {
+func (watcher *SyncRelay) Handle() {
 	data, err := watcher.settingStore.Get(storage.SyncActionSetting)
 	if err != nil {
 		log.Errorf("get sync setting failed: %s", err)
@@ -44,11 +44,11 @@ func (watcher *Watcher) Handle() {
 		return
 	}
 
-	if len(setting.Watches) == 0 {
+	if len(setting.Relays) == 0 {
 		return
 	}
 
-	for _, sw := range setting.Watches {
+	for _, sw := range setting.Relays {
 		from, token := sw.From, sw.Token
 		if from == "" {
 			from, token = setting.From, setting.Token
@@ -63,7 +63,7 @@ func (watcher *Watcher) Handle() {
 			continue
 		}
 
-		watchFiles, err := c.Watch(sw.Names)
+		watchFiles, err := c.RelayInfo(sw.Names)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"names": sw.Names,
