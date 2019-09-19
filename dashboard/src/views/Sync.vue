@@ -143,11 +143,16 @@
                     '    command: pwd\n' +
                     '  after:\n' +
                     '  - action: command\n' +
+                    '    when: SyncedFileSum() > 0\n' +
                     '    command: curl -i https://www.baidu.com\n' +
                     '  error:\n' +
                     '  - action: dingding\n' +
-                    '    body: "## Server {{ sysinfo \\"hostname\\" }} : {{ .FileSyncGroup.Name }} Has errors\\n\\n**IP:**\n' +
-                    '      {{ sysinfo \\"ip\\" }}\\n\\n**ERR:** \\n\\n    {{ .Err }}\\n"\n' +
+                    '    body: |\n' +
+                    '      ## Server {{ sysinfo "hostname" }} : {{ .FileSyncGroup.Name }} Has errors\n' +
+                    '      \n' +
+                    '      **IP:** {{ sysinfo "ip" }}\n' +
+                    '\n' +
+                    '      **ERR:** {{ .Err }}\n' +
                     '    token: YOUR_DINGDING_GROUP_TOKEN\n';
             },
             /**

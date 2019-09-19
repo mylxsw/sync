@@ -9,7 +9,6 @@ import (
 
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/container"
-	"github.com/mylxsw/sync/client"
 	"github.com/mylxsw/sync/collector"
 	"github.com/mylxsw/sync/config"
 	"github.com/mylxsw/sync/meta"
@@ -110,7 +109,7 @@ func (job *FileSyncJob) Handle(ctx context.Context, rpcFactory rpc.Factory, col 
 		errActions := job.ErrorActions()
 		if len(errActions) > 0 {
 			stage := col.Stage("errors")
-			matchData := action.NewSyncMatchData(job.ID, job.Payload, []meta.SyncUnit{}, []meta.SyncUnit{}, meta.FileNeedSyncs{}, err)
+			matchData := action.NewSyncMatchData(job.ID, job.Payload, []meta.SyncUnit{}, []meta.SyncUnit{}, meta.FileNeedSyncs{}, nil, err)
 			for _, ac := range errActions {
 				if act := job.actionFactory.Action(&ac, matchData); act != nil {
 					if err := act.Execute(stage); err != nil {
@@ -141,7 +140,7 @@ func (job *FileSyncJob) handle(ctx context.Context, rpcFactory rpc.Factory, col 
 	if err != nil {
 		return errors.Wrap(err, "create sync rpc client failed")
 	}
-	
+
 	defer syncClient.Close()
 
 	// load client metas
@@ -164,12 +163,13 @@ func (job *FileSyncJob) handle(ctx context.Context, rpcFactory rpc.Factory, col 
 	}
 
 	// syncing
-	if err := job.fileSync(remoteUnits, col, syncClient, deleteUnits); err != nil {
+	syncedFileCounts, err := job.fileSync(remoteUnits, col, syncClient, deleteUnits)
+	if err != nil {
 		return errors.Wrap(err, "file sync failed")
 	}
 
 	// sync after
-	if err := job.groupAfter(col, remoteUnits, deleteUnits); err != nil {
+	if err := job.groupAfter(col, remoteUnits, deleteUnits, syncedFileCounts); err != nil {
 		return errors.Wrap(err, "group after action failed")
 	}
 
@@ -177,7 +177,8 @@ func (job *FileSyncJob) handle(ctx context.Context, rpcFactory rpc.Factory, col 
 }
 
 // fileSync execute file sync progress
-func (job *FileSyncJob) fileSync(units []meta.SyncUnit, col *collector.Collector, syncClient client.FileSyncClient, deleteUnits []meta.SyncUnit) error {
+func (job *FileSyncJob) fileSync(units []meta.SyncUnit, col *collector.Collector, syncClient rpc.FileSyncClient, deleteUnits []meta.SyncUnit) ([]int, error) {
+	var syncedFiles = make([]int, 0)
 	for i, g := range units {
 		savePathGenerator := job.createSavePathGenerator(g.FileToSync)
 
@@ -185,8 +186,10 @@ func (job *FileSyncJob) fileSync(units []meta.SyncUnit, col *collector.Collector
 		stageSync := col.Stage(fmt.Sprintf("sync-files-#%d", i))
 		fileNeedSyncs, err := syncClient.SyncDiff(g.Files, savePathGenerator, true)
 		if err != nil {
-			return stageSync.Errorf("sync file diff failed: %s", err.Error())
+			return nil, stageSync.Errorf("sync file diff failed: %s", err.Error())
 		}
+
+		syncedFiles = append(syncedFiles, len(fileNeedSyncs.Files))
 
 		// append files need deleted to fileNeedSyncs
 		if len(deleteUnits[i].Files) > 0 {
@@ -201,11 +204,11 @@ func (job *FileSyncJob) fileSync(units []meta.SyncUnit, col *collector.Collector
 		// file sync before
 		stageSyncBefore := col.Stage(fmt.Sprintf("sync-before-#%d", i))
 		for j, before := range g.FileToSync.Before {
-			matchData := action.NewSyncMatchData(job.ID, job.Payload, []meta.SyncUnit{g}, deleteUnits[i:1], fileNeedSyncs, nil)
+			matchData := action.NewSyncMatchData(job.ID, job.Payload, []meta.SyncUnit{g}, deleteUnits[i:1], fileNeedSyncs, nil, nil)
 			if beforeAct := job.actionFactory.Action(&before, matchData); beforeAct != nil {
 				if err := beforeAct.Execute(stageSyncBefore); err != nil {
 					stageSyncBefore.Error(fmt.Sprintf("#%d matched, but execute failed: %s", j, err))
-					return errors.Wrap(err, "execute before stage failed")
+					return nil, errors.Wrap(err, "execute before stage failed")
 				}
 
 				stageSyncBefore.Info(fmt.Sprintf("#%d matched and ok", j))
@@ -218,7 +221,7 @@ func (job *FileSyncJob) fileSync(units []meta.SyncUnit, col *collector.Collector
 
 			if len(g.FileToSync.Error) > 0 {
 				errorStage := col.Stage(fmt.Sprintf("sync-errors-#%d", i))
-				matchData := action.NewSyncMatchData(job.ID, job.Payload, []meta.SyncUnit{}, deleteUnits[i:1], fileNeedSyncs, err)
+				matchData := action.NewSyncMatchData(job.ID, job.Payload, []meta.SyncUnit{}, deleteUnits[i:1], fileNeedSyncs, nil, err)
 				for _, ac := range g.FileToSync.Error {
 					if act := job.actionFactory.Action(&ac, matchData); act != nil {
 						if err := act.Execute(errorStage); err != nil {
@@ -234,17 +237,17 @@ func (job *FileSyncJob) fileSync(units []meta.SyncUnit, col *collector.Collector
 				continue
 			}
 
-			return errors.Wrap(err, "file sync failed")
+			return nil, errors.Wrap(err, "file sync failed")
 		}
 
 		// file sync after
 		stageSyncAfter := col.Stage(fmt.Sprintf("sync-after-#%d", i))
 		for j, after := range g.FileToSync.After {
-			matchData := action.NewSyncMatchData(job.ID, job.Payload, []meta.SyncUnit{g}, deleteUnits[i:1], fileNeedSyncs, nil)
+			matchData := action.NewSyncMatchData(job.ID, job.Payload, []meta.SyncUnit{g}, deleteUnits[i:1], fileNeedSyncs, nil, nil)
 			if act := job.actionFactory.Action(&after, matchData); act != nil {
 				if err := act.Execute(stageSyncAfter); err != nil {
 					stageSyncAfter.Error(fmt.Sprintf("#%d matched, but execute failed: %s", j, err))
-					return errors.Wrap(err, "execute after stage failed")
+					return nil, errors.Wrap(err, "execute after stage failed")
 				}
 
 				stageSyncAfter.Info(fmt.Sprintf("#%d matched and ok", j))
@@ -252,13 +255,13 @@ func (job *FileSyncJob) fileSync(units []meta.SyncUnit, col *collector.Collector
 		}
 	}
 
-	return nil
+	return syncedFiles, nil
 }
 
-func (job *FileSyncJob) groupAfter(col *collector.Collector, units []meta.SyncUnit, deleteUnits []meta.SyncUnit) error {
+func (job *FileSyncJob) groupAfter(col *collector.Collector, units []meta.SyncUnit, deleteUnits []meta.SyncUnit, syncedFileCounts []int) error {
 	stageGroupAfter := col.Stage("group-after")
 	for i, after := range job.AfterActions() {
-		matchData := action.NewSyncMatchData(job.ID, job.Payload, units, deleteUnits, meta.FileNeedSyncs{}, nil)
+		matchData := action.NewSyncMatchData(job.ID, job.Payload, units, deleteUnits, meta.FileNeedSyncs{}, syncedFileCounts, nil)
 		if act := job.actionFactory.Action(&after, matchData); act != nil {
 			if err := act.Execute(stageGroupAfter); err != nil {
 				stageGroupAfter.Error(fmt.Sprintf("#%d matched, but execute failed: %s", i, err))
@@ -275,7 +278,7 @@ func (job *FileSyncJob) groupAfter(col *collector.Collector, units []meta.SyncUn
 func (job *FileSyncJob) groupBefore(col *collector.Collector, units []meta.SyncUnit, deleteUnits []meta.SyncUnit) error {
 	stageGroupBefore := col.Stage("group-before")
 	for i, before := range job.BeforeActions() {
-		matchData := action.NewSyncMatchData(job.ID, job.Payload, units, deleteUnits, meta.FileNeedSyncs{}, nil)
+		matchData := action.NewSyncMatchData(job.ID, job.Payload, units, deleteUnits, meta.FileNeedSyncs{}, nil, nil)
 		if act := job.actionFactory.Action(&before, matchData); act != nil {
 			if err := act.Execute(stageGroupBefore); err != nil {
 				stageGroupBefore.Error(fmt.Sprintf("#%d matched, but execute failed: %s", i, err))
@@ -289,7 +292,7 @@ func (job *FileSyncJob) groupBefore(col *collector.Collector, units []meta.SyncU
 	return nil
 }
 
-func (job *FileSyncJob) syncMeta(col *collector.Collector, syncClient client.FileSyncClient) ([]meta.SyncUnit, error) {
+func (job *FileSyncJob) syncMeta(col *collector.Collector, syncClient rpc.FileSyncClient) ([]meta.SyncUnit, error) {
 	stageSyncMeta := col.Stage("load-remote-meta")
 	units := make([]meta.SyncUnit, 0)
 	for i, f := range job.Payload.Files {

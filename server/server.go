@@ -15,13 +15,13 @@ import (
 	ignore "github.com/sabhiram/go-gitignore"
 )
 
-// SyncServer 同步服务端实现
+// SyncServer is a implement for Server side GRPC
 type SyncServer struct {
 	bufferSize  int64
 	statusStore storage.JobStatusStore
 }
 
-// NewSyncServer 创建一个文件同步服务
+// NewSyncServer create a new SyncServer
 func NewSyncServer(bufferSize int64, statusStore storage.JobStatusStore) *SyncServer {
 	return &SyncServer{bufferSize: bufferSize, statusStore: statusStore,}
 }

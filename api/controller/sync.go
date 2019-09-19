@@ -11,6 +11,7 @@ import (
 	"github.com/mylxsw/sync/config"
 	"github.com/mylxsw/sync/meta"
 	"github.com/mylxsw/sync/queue"
+	"github.com/mylxsw/sync/queue/action"
 	"github.com/mylxsw/sync/storage"
 )
 
@@ -47,24 +48,33 @@ func (s *SyncDefinitionController) Register(router *hades.Router) {
 // @Param def body []meta.FileSyncGroup true "文件同步定义"
 // @Success 200 {array} meta.FileSyncGroup
 // @Router /sync/ [post]
-func (s *SyncDefinitionController) UpdateDefinitions(ctx *hades.WebContext, req *hades.HttpRequest, defStore storage.DefinitionStore, conf *config.Config) hades.HTTPResponse {
+func (s *SyncDefinitionController) UpdateDefinitions(
+	ctx *hades.WebContext,
+	req *hades.HttpRequest,
+	defStore storage.DefinitionStore,
+	conf *config.Config,
+	actionFactory action.Factory,
+) hades.HTTPResponse {
 	var syncGroupDefs []meta.FileSyncGroup
 	if req.ContentType() == "application/yaml" {
 		if err := req.UnmarshalYAML(&syncGroupDefs); err != nil {
-			return ctx.JSONError(fmt.Sprintf("parse definition failed: %s", err), http.StatusUnprocessableEntity)
+			return ctx.JSONError(
+				fmt.Sprintf("parse definition failed: %s", err),
+				http.StatusUnprocessableEntity,
+			)
 		}
 	} else {
 		if err := req.Unmarshal(&syncGroupDefs); err != nil {
-			return ctx.JSONError(fmt.Sprintf("parse definition failed: %s", err), http.StatusUnprocessableEntity)
+			return ctx.JSONError(
+				fmt.Sprintf("parse definition failed: %s", err),
+				http.StatusUnprocessableEntity,
+			)
 		}
 	}
 
-	for _, def := range syncGroupDefs {
-		for _, f := range def.Files {
-			if !conf.Allow(f.Dest) {
-				return ctx.JSONError(fmt.Sprintf("security: dest for %s not allowed to sync: %s", def.Name, f.Dest), http.StatusUnprocessableEntity)
-			}
-		}
+	response, done := s.validateDefinitions(syncGroupDefs, conf, ctx, actionFactory)
+	if done {
+		return response
 	}
 
 	var results []meta.FileSyncGroup
@@ -86,6 +96,63 @@ func (s *SyncDefinitionController) UpdateDefinitions(ctx *hades.WebContext, req 
 	return ctx.JSON(results)
 }
 
+func (s *SyncDefinitionController) validateDefinitions(
+	syncGroupDefs []meta.FileSyncGroup,
+	conf *config.Config,
+	ctx *hades.WebContext,
+	actionFactory action.Factory,
+) (hades.HTTPResponse, bool) {
+	for _, def := range syncGroupDefs {
+		for i, f := range def.Files {
+			if !conf.Allow(f.Dest) {
+				return ctx.JSONError(
+					fmt.Sprintf("security: dest for %s not allowed to sync: %s", def.Name, f.Dest),
+					http.StatusUnprocessableEntity,
+				), true
+			}
+
+			// check file-before
+			for j, bef := range f.Before {
+				if err := actionFactory.CheckExpr(bef.When); err != nil {
+					return ctx.JSONError(
+						fmt.Sprintf("invalid when condition for %s.%d.before-%d=%s: %s", def.Name, i, j, bef.When, err),
+						http.StatusUnprocessableEntity,
+					), true
+				}
+			}
+
+			// check file-after
+			for j, aft := range f.After {
+				if err := actionFactory.CheckExpr(aft.When); err != nil {
+					return ctx.JSONError(
+						fmt.Sprintf("invalid when condition for %s.%d.after-%d=%s: %s", def.Name, i, j, aft.When, err),
+						http.StatusUnprocessableEntity,
+					), true
+				}
+			}
+		}
+
+		for j, bef := range def.Before {
+			if err := actionFactory.CheckExpr(bef.When); err != nil {
+				return ctx.JSONError(
+					fmt.Sprintf("invalid when condition for %s.before-%d=%s: %s", def.Name, j, bef.When, err),
+					http.StatusUnprocessableEntity,
+				), true
+			}
+		}
+
+		for j, aft := range def.After {
+			if err := actionFactory.CheckExpr(aft.When); err != nil {
+				return ctx.JSONError(
+					fmt.Sprintf("invalid when condition for %s.after-%d=%s: %s", def.Name, j, aft.When, err),
+					http.StatusUnprocessableEntity,
+				), true
+			}
+		}
+	}
+	return nil, false
+}
+
 type BulkDeleteReq struct {
 	Names []string `json:"names"`
 }
@@ -96,7 +163,12 @@ type BulkDeleteReq struct {
 // @Param body body controller.BulkDeleteReq true "定义名称列表"
 // @Success 200 {string} string
 // @Router /sync-bulk/ [delete]
-func (s *SyncDefinitionController) BulkDelete(ctx *hades.WebContext, syncQueue queue.SyncQueue, defStore storage.DefinitionStore, statusStore storage.JobStatusStore) hades.HTTPResponse {
+func (s *SyncDefinitionController) BulkDelete(
+	ctx *hades.WebContext,
+	syncQueue queue.SyncQueue,
+	defStore storage.DefinitionStore,
+	statusStore storage.JobStatusStore,
+) hades.HTTPResponse {
 	var bulkDeleteReq BulkDeleteReq
 	if err := ctx.Unmarshal(&bulkDeleteReq); err != nil {
 		return ctx.JSONError("invalid request arguments, must be json", http.StatusUnprocessableEntity)
@@ -117,7 +189,11 @@ func (s *SyncDefinitionController) BulkDelete(ctx *hades.WebContext, syncQueue q
 // @Param name path string true "定义名称"
 // @Success 200 {string} string
 // @Router /sync/{name}/ [delete]
-func (s *SyncDefinitionController) DeleteDefinition(ctx *hades.WebContext, req *hades.HttpRequest, defStore storage.DefinitionStore) hades.HTTPResponse {
+func (s *SyncDefinitionController) DeleteDefinition(
+	ctx *hades.WebContext,
+	req *hades.HttpRequest,
+	defStore storage.DefinitionStore,
+) hades.HTTPResponse {
 	name := req.PathVar("name")
 	if name == "" {
 		return ctx.JSONError("invalid argument name", http.StatusUnprocessableEntity)
@@ -137,7 +213,11 @@ func (s *SyncDefinitionController) DeleteDefinition(ctx *hades.WebContext, req *
 // @Param format query string false "输出格式：yaml/json"
 // @Success 200 {array} meta.FileSyncGroup
 // @Router /sync/{name}/ [get]
-func (s *SyncDefinitionController) QueryDefinition(ctx *hades.WebContext, req *hades.HttpRequest, defStore storage.DefinitionStore) hades.HTTPResponse {
+func (s *SyncDefinitionController) QueryDefinition(
+	ctx *hades.WebContext,
+	req *hades.HttpRequest,
+	defStore storage.DefinitionStore,
+) hades.HTTPResponse {
 	name := req.PathVar("name")
 	if name == "" {
 		return ctx.JSONError("invalid argument name", http.StatusUnprocessableEntity)
@@ -170,7 +250,12 @@ func (s *SyncDefinitionController) QueryDefinition(ctx *hades.WebContext, req *h
 // @Param format query string false "输出格式：yaml/json"
 // @Success 200 {array} meta.FileSyncGroup
 // @Router /sync/ [get]
-func (s *SyncDefinitionController) AllDefinitions(ctx *hades.WebContext, req *hades.HttpRequest, defStore storage.DefinitionStore, settingFactory storage.SettingFactory) hades.HTTPResponse {
+func (s *SyncDefinitionController) AllDefinitions(
+	ctx *hades.WebContext,
+	req *hades.HttpRequest,
+	defStore storage.DefinitionStore,
+	settingFactory storage.SettingFactory,
+) hades.HTTPResponse {
 	resFormat := req.InputWithDefault("format", "json")
 	if resFormat != "json" && resFormat != "yaml" {
 		return ctx.JSONError("invalid format, only support json/yaml", http.StatusUnprocessableEntity)
@@ -199,7 +284,11 @@ type DefinitionStatus struct {
 // @Tags SyncStatus
 // @Success 200 {array} controller.DefinitionStatus
 // @Router /sync-stat/ [get]
-func (s *SyncDefinitionController) AllDefinitionStatus(ctx *hades.WebContext, defStore storage.DefinitionStore, statusStore storage.JobStatusStore) hades.HTTPResponse {
+func (s *SyncDefinitionController) AllDefinitionStatus(
+	ctx *hades.WebContext,
+	defStore storage.DefinitionStore,
+	statusStore storage.JobStatusStore,
+) hades.HTTPResponse {
 	defs, err := defStore.All()
 	if err != nil {
 		return ctx.JSONError(err.Error(), http.StatusInternalServerError)

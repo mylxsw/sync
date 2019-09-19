@@ -54,6 +54,7 @@ Sync Action Template:
 | .FileNeedSyncs | FileNeedSyncs | 需要同步的文件列表 |
 | .FileSyncGroup | FileSyncGroup | 同步定义 |
 | .Units | []SyncUnit | 待同步的文件列表，全量 |
+| .SyncedFileCounts | []int | 同步的文件数量，索引与文件列表对应 |
 | .Err | error | 同步错误信息 |
 | FileNeedSyncs.Files | []FileNeedSync | 需要同步的文件列表 |
 | FileNeedSync.SaveFilePath | string | 同步文件保存路径 | 
