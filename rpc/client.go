@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/sync/client"
 	"github.com/mylxsw/sync/protocol"
 	"github.com/pkg/errors"
@@ -9,7 +10,7 @@ import (
 
 // Factory RPC 客户端创建工厂
 type Factory interface {
-	// SyncClient 创建一个文件同步客户端
+	// SyncClient 创建一个文件同步客户端，使用完成之后不要忘记执行 Close 关闭连接
 	SyncClient(endpoint string, token string) (client.FileSyncClient, error)
 }
 
@@ -27,5 +28,8 @@ func (factory *factory) SyncClient(endpoint string, token string) (client.FileSy
 		return nil, errors.Wrap(err, "can't dial to remote rpc server")
 	}
 
-	return client.NewFileSyncClient(protocol.NewSyncServiceClient(conn)), nil
+	return client.NewFileSyncClient(protocol.NewSyncServiceClient(conn), func() {
+		_ = conn.Close()
+		log.Debugf("grpc connection closed")
+	}), nil
 }

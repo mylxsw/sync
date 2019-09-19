@@ -31,8 +31,8 @@ func NewSyncRelay(cc *container.Container) *SyncRelay {
 	return &watcher
 }
 
-func (watcher *SyncRelay) Handle() {
-	data, err := watcher.settingStore.Get(storage.SyncActionSetting)
+func (syncRelay *SyncRelay) Handle() {
+	data, err := syncRelay.settingStore.Get(storage.SyncActionSetting)
 	if err != nil {
 		log.Errorf("get sync setting failed: %s", err)
 		return
@@ -49,53 +49,62 @@ func (watcher *SyncRelay) Handle() {
 	}
 
 	for _, sw := range setting.Relays {
-		from, token := sw.From, sw.Token
-		if from == "" {
-			from, token = setting.From, setting.Token
-		}
-
-		c, err := watcher.clientFactory.SyncClient(from, token)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"from":  sw.From,
-				"token": sw.Token,
-			}).Errorf("create sync client failed: %s", err)
+		if err := syncRelay.relay(sw, setting); err != nil {
 			continue
-		}
-
-		watchFiles, err := c.RelayInfo(sw.Names)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"names": sw.Names,
-			}).Errorf("rpc watch files failed: %s", err)
-			continue
-		}
-
-		for _, wf := range watchFiles {
-			if wf.LastStatus != "ok" {
-				continue
-			}
-
-			lastUpdate, _ := time.Parse(time.RFC3339, wf.LastSyncAt)
-			_, localUpdate := watcher.statusStore.LastStatus(wf.Name)
-			if localUpdate.After(lastUpdate) {
-				continue
-			}
-
-			j, err := watcher.syncQueue.EnqueueOneByDef(wf.Name)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"remote_last_update": lastUpdate,
-					"local_last_update":  localUpdate,
-				}).Errorf("create sync job for %s failed: %s", wf.Name, err)
-				continue
-			}
-
-			log.WithFields(log.Fields{
-				"job_id":             j.ID,
-				"remote_last_update": lastUpdate,
-				"local_last_update":  localUpdate,
-			}).Infof("create sync job %s ok", wf.Name)
 		}
 	}
+}
+
+func (syncRelay *SyncRelay) relay(sw meta.SyncRelay, setting meta.GlobalFileSyncSetting) error {
+	from, token := sw.From, sw.Token
+	if from == "" {
+		from, token = setting.From, setting.Token
+	}
+
+	c, err := syncRelay.clientFactory.SyncClient(from, token)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"from":  sw.From,
+			"token": sw.Token,
+		}).Errorf("create sync client failed: %s", err)
+		return err
+	}
+	defer c.Close()
+
+	watchFiles, err := c.RelayInfo(sw.Names)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"names": sw.Names,
+		}).Errorf("rpc watch files failed: %s", err)
+		return err
+	}
+
+	for _, wf := range watchFiles {
+		if wf.LastStatus != "ok" {
+			continue
+		}
+
+		lastUpdate, _ := time.Parse(time.RFC3339, wf.LastSyncAt)
+		_, localUpdate := syncRelay.statusStore.LastStatus(wf.Name)
+		if localUpdate.After(lastUpdate) {
+			continue
+		}
+
+		j, err := syncRelay.syncQueue.EnqueueOneByDef(wf.Name)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"remote_last_update": lastUpdate,
+				"local_last_update":  localUpdate,
+			}).Errorf("create sync job for %s failed: %s", wf.Name, err)
+			continue
+		}
+
+		log.WithFields(log.Fields{
+			"job_id":             j.ID,
+			"remote_last_update": lastUpdate,
+			"local_last_update":  localUpdate,
+		}).Infof("create sync job %s ok", wf.Name)
+	}
+
+	return nil
 }

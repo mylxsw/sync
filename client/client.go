@@ -33,16 +33,19 @@ type FileSyncClient interface {
 	SyncFiles(fileNeedSyncs meta.FileNeedSyncs, stage *collector.Stage) error
 	// RelayInfo 检查上游是否有变更
 	RelayInfo(names []string) ([]*protocol.RelayFile, error)
+	// Close close GRPC connection
+	Close()
 }
 
 // fileSyncClient 文件同步客户端
 type fileSyncClient struct {
-	client protocol.SyncServiceClient
+	client  protocol.SyncServiceClient
+	closeFn func()
 }
 
 // NewFileSyncClient 创建一个文件同步客户端
-func NewFileSyncClient(client protocol.SyncServiceClient) FileSyncClient {
-	return &fileSyncClient{client: client}
+func NewFileSyncClient(client protocol.SyncServiceClient, closeFn func()) FileSyncClient {
+	return &fileSyncClient{client: client, closeFn: closeFn,}
 }
 
 func (fs *fileSyncClient) SyncMeta(fileToSync meta.File) ([]*protocol.File, error) {
@@ -471,4 +474,10 @@ func (fs *fileSyncClient) RelayInfo(names []string) ([]*protocol.RelayFile, erro
 	}
 
 	return resp.Files, err
+}
+
+func (fs *fileSyncClient) Close() {
+	if fs.closeFn != nil {
+		fs.closeFn()
+	}
 }

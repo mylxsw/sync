@@ -141,6 +141,8 @@ func (job *FileSyncJob) handle(ctx context.Context, rpcFactory rpc.Factory, col 
 	if err != nil {
 		return errors.Wrap(err, "create sync rpc client failed")
 	}
+	
+	defer syncClient.Close()
 
 	// load client metas
 	localUnits, err := job.syncLocalMeta(col)
